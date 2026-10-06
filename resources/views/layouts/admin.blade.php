@@ -9,6 +9,11 @@
     <meta name="theme-color" content="#066fd1">
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
     <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+    <script>
+        try {
+            document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('helpdeskai-theme') || 'light');
+        } catch (e) {}
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
@@ -42,8 +47,10 @@
         ],
         'Automation' => [
             ['route' => 'admin.sla-policies.index',    'label' => __('SLA Policies'),     'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+            ['route' => 'admin.holidays.index',          'label' => __('Holidays'),          'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
             ['route' => 'admin.automation-rules.index','label' => __('Automation Rules'), 'icon' => 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'],
             ['route' => 'admin.email-logs.index',      'label' => __('Email Logs'),       'icon' => 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+            ['route' => 'admin.webhooks.index',         'label' => __('Webhooks'),          'icon' => 'M13 10V3L4 14h7v7l9-11h-7z'],
             ['route' => 'admin.push-subscriptions.index','label' => __('Push Subscribers'),'icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
         ],
         'Settings'   => [
@@ -131,6 +138,11 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-nav flex-row order-md-last ms-auto">
+                    <div class="nav-item d-flex align-items-center me-1">
+                        <button type="button" onclick="toggleTheme()" class="btn btn-ghost-secondary btn-icon" title="{{ __('Toggle dark mode') }}" aria-label="{{ __('Toggle dark mode') }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                        </button>
+                    </div>
                     <div class="nav-item d-none d-md-flex me-2">
                         <a href="{{ url('/') }}" target="_blank" class="btn btn-ghost-secondary" title="{{ __('View public site') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>

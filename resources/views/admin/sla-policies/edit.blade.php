@@ -59,6 +59,43 @@
                             <span class="form-check-label">Active</span>
                         </label>
                     </div>
+                    <div class="card mt-3 mb-3">
+                        <div class="card-header"><h3 class="card-title">Business Hours</h3></div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-check form-switch">
+                                    <input type="checkbox" name="use_business_hours" value="1" {{ old('use_business_hours', $policy->use_business_hours) ? 'checked' : '' }} class="form-check-input">
+                                    <span class="form-check-label">Count only within business hours</span>
+                                </label>
+                            </div>
+                            <div class="mb-3">
+                                <span class="form-label">Workdays</span>
+                                <div class="d-flex flex-wrap gap-3">
+                                    @foreach([1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'] as $d => $label)
+                                    <label class="form-check">
+                                        <input type="checkbox" name="workdays[]" value="{{ $d }}" {{ in_array($d, old('workdays', $policy->workdayList())) ? 'checked' : '' }} class="form-check-input">
+                                        <span class="form-check-label">{{ $label }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label for="work_start" class="form-label">Work start</label>
+                                    <input type="time" name="work_start" id="work_start" value="{{ old('work_start', substr((string) $policy->work_start, 0, 5)) }}" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="work_end" class="form-label">Work end</label>
+                                    <input type="time" name="work_end" id="work_end" value="{{ old('work_end', substr((string) $policy->work_end, 0, 5)) }}" class="form-control">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="timezone" class="form-label">Timezone</label>
+                                    <input type="text" name="timezone" id="timezone" value="{{ old('timezone', $policy->timezone ?? 'Asia/Jakarta') }}" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-hint mt-2">Holidays (Automation → Holidays) are always skipped.</div>
+                        </div>
+                    </div>
                     <div class="form-footer d-flex justify-content-end gap-2">
                         <a href="{{ route('admin.sla-policies.index') }}" class="btn">Cancel</a>
                         <button type="submit" class="btn btn-primary">Update Policy</button>

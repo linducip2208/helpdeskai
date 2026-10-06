@@ -44,6 +44,8 @@ class Ticket extends Model
             'custom_fields' => 'array',
             'is_starred' => 'boolean',
             'sla_due_at' => 'datetime',
+            'sla_response_due_at' => 'datetime',
+            'sla_warned_at' => 'datetime',
             'sla_breached' => 'boolean',
             'first_response_at' => 'datetime',
             'resolved_at' => 'datetime',

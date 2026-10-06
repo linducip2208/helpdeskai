@@ -26,17 +26,28 @@ class SlaPolicyController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    protected function rules(): array
     {
-        $validated = $request->validate([
+        return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'department_id' => 'required|exists:departments,id',
             'priority' => 'required|string|in:low,medium,high,urgent',
             'first_response_time' => 'required|integer|min:1',
             'resolution_time' => 'required|integer|min:1',
+            'workdays' => 'nullable|array',
+            'workdays.*' => 'integer|min:1|max:7',
+            'work_start' => 'nullable|date_format:H:i',
+            'work_end' => 'nullable|date_format:H:i|after:work_start',
+            'timezone' => 'nullable|string|max:64',
+            'use_business_hours' => 'boolean',
             'is_active' => 'boolean',
-        ]);
+        ];
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate($this->rules());
 
         $policy = SlaPolicy::create($validated);
 
@@ -55,15 +66,7 @@ class SlaPolicyController extends Controller
 
     public function update(Request $request, SlaPolicy $slaPolicy): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'department_id' => 'required|exists:departments,id',
-            'priority' => 'required|string|in:low,medium,high,urgent',
-            'first_response_time' => 'required|integer|min:1',
-            'resolution_time' => 'required|integer|min:1',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $request->validate($this->rules());
 
         $slaPolicy->update($validated);
 

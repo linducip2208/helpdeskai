@@ -14,6 +14,11 @@ class SlaPolicy extends Model
         'priority',
         'first_response_time',
         'resolution_time',
+        'workdays',
+        'work_start',
+        'work_end',
+        'timezone',
+        'use_business_hours',
         'is_active',
     ];
 
@@ -21,9 +26,21 @@ class SlaPolicy extends Model
     {
         return [
             'is_active' => 'boolean',
+            'use_business_hours' => 'boolean',
             'first_response_time' => 'integer',
             'resolution_time' => 'integer',
+            'workdays' => 'array',
         ];
+    }
+
+    /**
+     * @return array<int>
+     */
+    public function workdayList(): array
+    {
+        $days = $this->workdays ?? [1, 2, 3, 4, 5];
+
+        return array_values(array_map('intval', (array) $days));
     }
 
     public function department(): BelongsTo

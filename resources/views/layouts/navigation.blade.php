@@ -10,6 +10,11 @@
             </a>
         </div>
         <div class="navbar-nav flex-row order-md-last ms-auto">
+            <div class="nav-item d-flex align-items-center me-1">
+                <button type="button" onclick="toggleTheme()" class="btn btn-ghost-secondary btn-icon" title="{{ __('Toggle dark mode') }}" aria-label="{{ __('Toggle dark mode') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+            </div>
             @auth
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="{{ __('Open user menu') }}">

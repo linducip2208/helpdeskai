@@ -13,6 +13,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class TicketService
@@ -28,6 +29,7 @@ class TicketService
             $data['status'] = $data['status'] ?? TicketStatus::Open->value;
             $data['uid'] = $this->generateUid();
             $data['sla_due_at'] = $this->calculateSlaDueAt($data['department_id'] ?? null, $data['priority'] ?? 'medium');
+            $data['sla_response_due_at'] = $this->calculateResponseDueAt($data['department_id'] ?? null, $data['priority'] ?? 'medium');
 
             $ticket = Ticket::create($data);
 
@@ -51,6 +53,8 @@ class TicketService
         $this->autoClassify($ticket);
 
         app(AutomationService::class)->fire('ticket_created', $ticket);
+
+        app(WebhookService::class)->dispatch('ticket.created', $ticket->fresh() ?? $ticket);
 
         $this->notifyOnCreate($ticket);
 
@@ -79,6 +83,8 @@ class TicketService
                 ['ticket_id' => $ticket->id]
             );
         }
+
+        app(WebhookService::class)->dispatch('ticket.assigned', $ticket->fresh() ?? $ticket, ['assigned_to' => $userId]);
 
         return $ticket;
     }
@@ -120,6 +126,8 @@ class TicketService
 
         app(AutomationService::class)->fire('ticket_status_changed', $ticket, ['from' => $oldStatus, 'to' => $status]);
 
+        app(WebhookService::class)->dispatch('ticket.status_changed', $ticket->fresh() ?? $ticket, ['from' => $oldStatus, 'to' => $status]);
+
         return $ticket;
     }
 
@@ -155,6 +163,10 @@ class TicketService
         }
 
         app(AutomationService::class)->fire('ticket_replied', $ticket, ['reply_id' => $reply->id, 'is_internal' => $isInternal]);
+
+        if (! $isInternal) {
+            app(WebhookService::class)->dispatch('ticket.replied', $ticket->fresh() ?? $ticket, ['reply_id' => $reply->id]);
+        }
 
         return $reply;
     }
@@ -417,20 +429,60 @@ class TicketService
 
     public function calculateSlaDueAt(?int $departmentId = null, string $priority = 'medium'): ?Carbon
     {
+        $policy = $this->activePolicy($departmentId, $priority);
+
+        if (! $policy || ! $policy->resolution_time) {
+            return null;
+        }
+
+        return $this->addPolicyMinutes(now(), $policy, $policy->resolution_time);
+    }
+
+    public function calculateResponseDueAt(?int $departmentId = null, string $priority = 'medium'): ?Carbon
+    {
+        $policy = $this->activePolicy($departmentId, $priority);
+
+        if (! $policy || ! $policy->first_response_time) {
+            return null;
+        }
+
+        return $this->addPolicyMinutes(now(), $policy, $policy->first_response_time);
+    }
+
+    protected function activePolicy(?int $departmentId, string $priority): ?SlaPolicy
+    {
         if (! $departmentId) {
             return null;
         }
 
-        $sla = SlaPolicy::where('department_id', $departmentId)
+        return SlaPolicy::where('department_id', $departmentId)
             ->where('priority', $priority)
             ->where('is_active', true)
             ->first();
+    }
 
-        if (! $sla || ! $sla->resolution_time) {
-            return null;
+    protected function addPolicyMinutes(Carbon $start, SlaPolicy $policy, int $minutes): Carbon
+    {
+        if (! $policy->use_business_hours) {
+            return $start->copy()->addMinutes($minutes);
         }
 
-        return now()->addMinutes($sla->resolution_time);
+        $holidays = \App\Models\Holiday::query()
+            ->pluck('date')
+            ->map(fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : substr((string) $d, 0, 10))
+            ->all();
+
+        $due = BusinessHours::addMinutes(
+            $start,
+            $minutes,
+            $policy->workdayList(),
+            substr((string) $policy->work_start, 0, 5),
+            substr((string) $policy->work_end, 0, 5),
+            $policy->timezone ?: 'Asia/Jakarta',
+            $holidays
+        );
+
+        return $due->setTimezone(config('app.timezone'));
     }
 
     public function generateUid(): string

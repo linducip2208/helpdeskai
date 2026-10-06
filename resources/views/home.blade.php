@@ -7,6 +7,11 @@
     <title>{{ config('app.name', 'HelpDesk AI') }} - AI-Powered Customer Support</title>
     <meta name="description" content="Streamline your customer service with intelligent ticket management, automated responses, and real-time AI assistance.">
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    <script>
+        try {
+            document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('helpdeskai-theme') || 'light');
+        } catch (e) {}
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -24,6 +29,11 @@
                 </a>
             </div>
             <div class="navbar-nav flex-row order-md-last ms-auto">
+                <div class="nav-item d-flex align-items-center me-1">
+                    <button type="button" onclick="toggleTheme()" class="btn btn-ghost-light btn-icon" title="Toggle dark mode" aria-label="Toggle dark mode">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                </div>
                 @auth
                     <div class="nav-item d-flex align-items-center gap-2">
                         <a href="{{ url('/dashboard') }}" class="btn btn-ghost-light">Dashboard</a>

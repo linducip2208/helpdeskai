@@ -13,6 +13,11 @@
         <link rel="apple-touch-icon" href="/icons/icon-192.svg">
         <link rel="alternate" type="application/rss+xml" title="{{ config('app.name', 'HelpDesk AI') }} Blog" href="{{ url('/blog/feed.xml') }}">
 
+        <script>
+            try {
+                document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('helpdeskai-theme') || 'light');
+            } catch (e) {}
+        </script>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body>

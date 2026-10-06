@@ -26,6 +26,8 @@ use App\Http\Controllers\Admin\SeoMetaController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\SlaPolicyController;
+use App\Http\Controllers\Admin\HolidayController;
+use App\Http\Controllers\Admin\WebhookEndpointController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BlogController;
@@ -130,7 +132,17 @@ Route::middleware(['auth', 'verified', '2fa', 'role:admin'])->prefix('admin')->n
 
     Route::resource('canned-responses', CannedResponseController::class)->except(['show']);
     Route::resource('sla-policies', SlaPolicyController::class)->except(['show']);
-    Route::resource('automation-rules', AutomationRuleController::class)->except(['show']);
+    Route::get('/holidays', [HolidayController::class, 'index'])->name('holidays.index');
+    Route::post('/holidays', [HolidayController::class, 'store'])->name('holidays.store');
+    Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
+
+    Route::get('/webhooks', [WebhookEndpointController::class, 'index'])->name('webhooks.index');
+    Route::post('/webhooks', [WebhookEndpointController::class, 'store'])->name('webhooks.store');
+    Route::get('/webhooks/deliveries', [WebhookEndpointController::class, 'deliveries'])->name('webhooks.deliveries');
+    Route::get('/webhooks/{webhook}/edit', [WebhookEndpointController::class, 'edit'])->name('webhooks.edit');
+    Route::put('/webhooks/{webhook}', [WebhookEndpointController::class, 'update'])->name('webhooks.update');
+    Route::delete('/webhooks/{webhook}', [WebhookEndpointController::class, 'destroy'])->name('webhooks.destroy');
+    Route::post('/webhooks/{webhook}/test', [WebhookEndpointController::class, 'test'])->name('webhooks.test');    Route::resource('automation-rules', AutomationRuleController::class)->except(['show']);
 
     Route::resource('ai-providers', AiProviderController::class)->except(['show']);
     Route::post('/ai-providers/{provider}/test-connection', [AiProviderController::class, 'testConnection'])->name('ai-providers.test-connection');
