@@ -10,6 +10,7 @@ use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketReply;
+use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -231,6 +232,66 @@ class TicketService
         }
 
         return $stored;
+    }
+
+    public function logTime(Ticket $ticket, int $userId, int $minutes, ?string $note = null, ?string $workedAt = null): TimeEntry
+    {
+        $entry = $ticket->timeEntries()->create([
+            'user_id' => $userId,
+            'minutes' => max(1, $minutes),
+            'note' => $note ? substr($note, 0, 255) : null,
+            'worked_at' => $workedAt ?? now()->toDateString(),
+        ]);
+
+        ActivityLogService::log(
+            'ticket_time_logged',
+            $ticket,
+            $ticket->subject,
+            ['minutes' => $entry->minutes, 'entry_id' => $entry->id]
+        );
+
+        return $entry;
+    }
+
+    public function totalMinutes(Ticket $ticket): int
+    {
+        return (int) $ticket->timeEntries()->sum('minutes');
+    }
+
+    public function mergeTickets(Ticket $primary, Ticket $secondary, int $userId): Ticket
+    {
+        abort_if($primary->id === $secondary->id, 422, 'Cannot merge a ticket into itself.');
+        abort_if($primary->isResolved(), 422, 'Cannot merge into a resolved ticket.');
+
+        return DB::transaction(function () use ($primary, $secondary, $userId) {
+            $secondary->replies()->update(['ticket_id' => $primary->id]);
+            $secondary->attachments()->update(['ticket_id' => $primary->id]);
+            $secondary->timeEntries()->update(['ticket_id' => $primary->id]);
+
+            $primary->replies()->create([
+                'user_id' => $userId,
+                'body' => "[Merged from {$secondary->uid}] {$secondary->subject}",
+                'is_internal' => true,
+                'source' => 'web',
+            ]);
+
+            $secondary->update(['status' => TicketStatus::Closed->value]);
+            $secondary->replies()->create([
+                'user_id' => $userId,
+                'body' => "[Merged into {$primary->uid}] {$primary->subject}",
+                'is_internal' => true,
+                'source' => 'web',
+            ]);
+
+            ActivityLogService::log(
+                'ticket_merge',
+                $primary,
+                $primary->subject,
+                ['merged_ticket_id' => $secondary->id, 'merged_uid' => $secondary->uid]
+            );
+
+            return $primary->fresh();
+        });
     }
 
     private function notifyOnCreate(Ticket $ticket): void

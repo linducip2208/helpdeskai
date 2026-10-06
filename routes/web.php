@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\SlaPolicyController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
+use App\Http\Controllers\Admin\TicketCustomFieldController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WebhookEndpointController;
 use App\Http\Controllers\BlogController;
@@ -42,6 +43,7 @@ use App\Http\Controllers\ServicePageController;
 use App\Http\Controllers\User\ConversationController as UserConversationController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\TicketController as UserTicketController;
+use App\Http\Controllers\WidgetController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -62,6 +64,7 @@ Route::get('/knowledge-base/{slug}', [KnowledgeBaseController::class, 'show'])->
 
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'submit'])->name('contact.send')->middleware('throttle:10,1');
+Route::post('/widget/tickets', [WidgetController::class, 'ticket'])->name('widget.ticket')->middleware('throttle:5,1');
 
 Route::view('/docs', 'docs')->name('docs');
 
@@ -91,6 +94,7 @@ Route::middleware(['auth', 'verified', '2fa'])->group(function () {
 Route::middleware(['auth', 'verified', '2fa'])->name('user.')->group(function () {
     Route::resource('tickets', UserTicketController::class)->except(['edit']);
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');
+    Route::get('/tickets-fields', [UserTicketController::class, 'customFields'])->name('tickets.fields');
     Route::get('/attachments/{attachment}/download', [UserTicketController::class, 'downloadAttachment'])->name('attachments.download');
 
     Route::get('/conversations', [UserConversationController::class, 'index'])->name('conversations.index');
@@ -106,6 +110,7 @@ Route::middleware(['auth', 'verified', '2fa', 'staff'])->prefix('admin')->name('
 
     Route::get('/tickets', [AdminTicketController::class, 'index'])->name('tickets.index')->middleware('permission:tickets.view');
     Route::get('/tickets/create', [AdminTicketController::class, 'create'])->name('tickets.create')->middleware('permission:tickets.create');
+    Route::get('/tickets/fields', [AdminTicketController::class, 'customFields'])->name('tickets.fields')->middleware('permission:tickets.create');
     Route::post('/tickets', [AdminTicketController::class, 'store'])->name('tickets.store')->middleware('permission:tickets.create');
     Route::get('/tickets/{ticket}', [AdminTicketController::class, 'show'])->name('tickets.show')->middleware('permission:tickets.view');
     Route::get('/tickets/{ticket}/edit', [AdminTicketController::class, 'edit'])->name('tickets.edit')->middleware('permission:tickets.update');
@@ -118,10 +123,13 @@ Route::middleware(['auth', 'verified', '2fa', 'staff'])->prefix('admin')->name('
     Route::patch('/tickets/{ticket}/update-status', [AdminTicketController::class, 'updateStatus'])->name('tickets.update-status')->middleware('permission:tickets.update');
     Route::patch('/tickets/{ticket}/update-priority', [AdminTicketController::class, 'updatePriority'])->name('tickets.update-priority')->middleware('permission:tickets.update');
     Route::post('/tickets/{ticket}/suggest', [AdminTicketController::class, 'suggest'])->name('tickets.suggest')->middleware('permission:ai.use');
+    Route::post('/tickets/{ticket}/merge', [AdminTicketController::class, 'merge'])->name('tickets.merge')->middleware('permission:tickets.merge');
+    Route::post('/tickets/{ticket}/log-time', [AdminTicketController::class, 'logTime'])->name('tickets.log-time')->middleware('permission:tickets.update');
     Route::get('/attachments/{attachment}/download', [AdminTicketController::class, 'downloadAttachment'])->name('attachments.download')->middleware('permission:tickets.view');
 
     Route::resource('departments', DepartmentController::class)->except(['show'])->middleware('permission:departments.manage');
     Route::resource('categories', CategoryController::class)->except(['show'])->middleware('permission:categories.manage');
+    Route::resource('custom-fields', TicketCustomFieldController::class)->except(['show'])->middleware('permission:custom_fields.manage');
     Route::resource('users', UserController::class)->middleware('permission:manage_users');
     Route::post('/users/{user}/impersonate', [UserController::class, 'impersonate'])->name('users.impersonate')->middleware('permission:users.impersonate');
 

@@ -40,6 +40,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'users.impersonate',
             'departments.manage',
             'categories.manage',
+            'custom_fields.manage',
             'email.manage',
             'webhooks.manage',
             'manage_users',
@@ -83,6 +84,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_knowledge',
             'departments.manage',
             'categories.manage',
+            'custom_fields.manage',
             'email.manage',
             'webhooks.manage',
         ]);

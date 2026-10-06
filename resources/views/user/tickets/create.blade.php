@@ -47,6 +47,7 @@
                                 </div>
                             </div>
                         </div>
+                        @include('tickets._custom_fields', ['customFields' => $customFields ?? collect(), 'fieldsUrl' => $fieldsUrl ?? null])
                         <div class="d-flex justify-content-end pt-2">
                             <button type="submit" class="btn btn-primary">Submit Ticket</button>
                         </div>

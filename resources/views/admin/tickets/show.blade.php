@@ -1,6 +1,9 @@
 @extends('layouts.admin')
 @section('title', 'Ticket #' . ($ticket->id ?? '0'))
 @section('page-actions')
+    @can('tickets.merge')
+    <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#merge-modal">Merge</button>
+    @endcan
     <a href="{{ route('admin.tickets.edit', $ticket ?? 0) }}" class="btn">Edit</a>
     <form action="{{ route('admin.tickets.destroy', $ticket ?? 0) }}" method="POST" class="d-inline">
         @csrf @method('DELETE')
@@ -18,11 +21,42 @@
         <div class="card mb-3">
             <div class="card-body">
                 {!! nl2br(e($ticket->body ?? '')) !!}
+                @include('tickets._custom_field_values', ['customFieldValues' => $customFieldValues ?? []])
                 @include('tickets._attachments', ['attachments' => $ticket->attachments ?? collect(), 'downloadRoute' => 'admin.attachments.download'])
             </div>
         </div>
 
         <h3 class="card-title mb-2">Replies</h3>
+        <div id="ticket-presence" class="d-none align-items-center gap-2 mb-2">
+            <div id="presence-avatars" class="avatar-list avatar-list-stacked"></div>
+            <span id="presence-text" class="text-muted small"></span>
+        </div>
+        <script>
+        (function () {
+            if (!window.Echo) return;
+            var wrap = document.getElementById('ticket-presence');
+            var avatars = document.getElementById('presence-avatars');
+            var text = document.getElementById('presence-text');
+            var me = {{ auth()->id() }};
+            function render(members) {
+                var others = members.filter(function (m) { return m.id !== me; });
+                if (!others.length) { wrap.classList.add('d-none'); wrap.classList.remove('d-flex'); return; }
+                wrap.classList.remove('d-none'); wrap.classList.add('d-flex');
+                avatars.innerHTML = others.slice(0, 5).map(function (m) {
+                    return '<span class="avatar avatar-xs" title="' + m.name.replace(/"/g, '') + '">' + m.name.charAt(0).toUpperCase() + '</span>';
+                }).join('');
+                text.textContent = others.length === 1
+                    ? others[0].name + ' is also viewing this ticket'
+                    : others.length + ' people are also viewing this ticket';
+            }
+            try {
+                var channel = window.Echo.join('ticket.{{ $ticket->id ?? 0 }}');
+                channel.here(render);
+                channel.joining(function () { channel.here(render); });
+                channel.leaving(function () { channel.here(render); });
+            } catch (e) {}
+        })();
+        </script>
         @forelse($ticket->replies ?? [] as $reply)
         @php $isInternal = (bool) ($reply->is_internal ?? false); @endphp
         @if($isInternal)
@@ -297,7 +331,7 @@
         </div>
         @endif
 
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-body">
                 <div class="mb-2"><span class="text-muted">Department:</span> <strong class="ms-1">{{ $ticket->department->name ?? 'N/A' }}</strong></div>
                 <div class="mb-2"><span class="text-muted">Category:</span> <strong class="ms-1">{{ $ticket->category->name ?? 'N/A' }}</strong></div>
@@ -306,6 +340,63 @@
                 <div><span class="text-muted">Updated:</span> <strong class="ms-1">{{ $ticket->updated_at->diffForHumans() }}</strong></div>
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Time Tracking</h3>
+                <div class="card-actions"><span class="badge bg-blue-lt">{{ intdiv($timeTotal ?? 0, 60) }}h {{ ($timeTotal ?? 0) % 60 }}m</span></div>
+            </div>
+            <div class="card-body">
+                @forelse($timeEntries ?? [] as $entry)
+                <div class="d-flex justify-content-between mb-2">
+                    <div>
+                        <div>{{ $entry->note ?? '—' }}</div>
+                        <div class="text-muted small">{{ $entry->user->name ?? '—' }} · {{ wib($entry->worked_at, 'd F Y', false) }}</div>
+                    </div>
+                    <span class="badge bg-secondary-lt">{{ $entry->minutes }}m</span>
+                </div>
+                @empty
+                <p class="text-muted small mb-3">No time logged yet.</p>
+                @endforelse
+                <form action="{{ route('admin.tickets.log-time', $ticket ?? 0) }}" method="POST">
+                    @csrf
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <input type="number" name="minutes" min="1" max="1440" placeholder="Min" class="form-control" required>
+                        </div>
+                        <div class="col-8">
+                            <input type="text" name="note" maxlength="255" placeholder="Note (optional)" class="form-control">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-sm mt-2">Log Time</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+
+@can('tickets.merge')
+<div class="modal modal-blur fade" id="merge-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Merge Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('admin.tickets.merge', $ticket ?? 0) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted">Move all replies, attachments and time entries from another ticket into this one. The other ticket will be closed.</p>
+                    <label class="form-label" for="target_uid">Source ticket UID (e.g. TKT-ABCDE)</label>
+                    <input type="text" name="target_uid" id="target_uid" class="form-control font-monospace" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Merge</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
 @endsection

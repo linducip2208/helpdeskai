@@ -76,6 +76,8 @@
                         </div>
                     </div>
 
+                    @include('tickets._custom_fields', ['customFields' => $customFields ?? collect(), 'fieldsUrl' => $fieldsUrl ?? null])
+
                     <div class="card-footer d-flex justify-content-end">
                         <a href="{{ route('admin.tickets.index') }}" class="btn me-2">Cancel</a>
                         <button type="submit" class="btn btn-primary">Create Ticket</button>

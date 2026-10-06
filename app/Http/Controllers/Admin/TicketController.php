@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\TicketViewing;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
+use App\Models\TicketCustomField;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\CustomFieldService;
 use App\Services\TicketService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -48,9 +51,14 @@ class TicketController extends Controller
     {
         $ticket->load(['user', 'assignedTo', 'department', 'category', 'replies.user', 'replies.attachments', 'attachments']);
 
+        broadcast(new TicketViewing($ticket, auth()->user()));
+
         return view('admin.tickets.show', [
             'ticket' => $ticket,
             'agents' => User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->get(['id', 'name']),
+            'customFieldValues' => $this->customFieldValues($ticket),
+            'timeEntries' => $ticket->timeEntries()->with('user:id,name')->latest()->take(10)->get(),
+            'timeTotal' => (int) $ticket->timeEntries()->sum('minutes'),
         ]);
     }
 
@@ -128,12 +136,33 @@ class TicketController extends Controller
             'categories' => Category::all(['id', 'name']),
             'agents' => User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->get(['id', 'name']),
             'customers' => User::whereHas('roles', fn ($q) => $q->where('name', 'customer'))->get(['id', 'name']),
+            'customFields' => app(CustomFieldService::class)->forDepartment(null),
+            'fieldsUrl' => route('admin.tickets.fields'),
+        ]);
+    }
+
+    public function customFields(Request $request): JsonResponse
+    {
+        $fields = app(CustomFieldService::class)->forDepartment($request->integer('department_id') ?: null);
+
+        return response()->json([
+            'success' => true,
+            'data' => $fields->filter(fn ($f) => $f->department_id !== null)->values()->map(fn ($f) => [
+                'name' => $f->name,
+                'label' => $f->label,
+                'type' => $f->type,
+                'required' => (bool) $f->is_required,
+                'options' => $f->optionList(),
+            ]),
+            'message' => 'Custom fields retrieved.',
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $custom = app(CustomFieldService::class);
+
+        $validated = $request->validate(array_merge([
             'subject' => 'required|string|max:255',
             'description' => 'required|string',
             'user_id' => 'required|exists:users,id',
@@ -142,12 +171,13 @@ class TicketController extends Controller
             'assigned_to' => 'nullable|exists:users,id',
             'priority' => ['nullable', 'string', Rule::in(['low', 'medium', 'high', 'urgent'])],
             'status' => ['nullable', 'string', Rule::in(['open', 'in_progress', 'waiting', 'answered', 'resolved', 'closed'])],
-        ]);
+        ], $custom->rules($request->integer('department_id') ?: null)));
 
         $validated['body'] = $validated['description'];
         unset($validated['description']);
         $validated['priority'] = $validated['priority'] ?? 'medium';
         $validated['status'] = $validated['status'] ?? 'open';
+        $validated['custom_fields'] = $custom->extract($request->integer('department_id') ?: null, $validated);
 
         $ticket = $this->ticketService->createTicket($validated);
 
@@ -194,6 +224,60 @@ class TicketController extends Controller
         abort_unless($path && Storage::disk('local')->exists($path), 404);
 
         return Storage::disk('local')->download($path, $attachment->original_name);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function customFieldValues(Ticket $ticket): array
+    {
+        $values = $ticket->custom_fields ?? [];
+
+        if ($values === []) {
+            return [];
+        }
+
+        $labels = TicketCustomField::whereIn('name', array_keys($values))->pluck('label', 'name');
+
+        $out = [];
+        foreach ($values as $name => $value) {
+            $out[$labels[$name] ?? $name] = (string) $value;
+        }
+
+        return $out;
+    }
+
+    public function merge(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $validated = $request->validate([
+            'target_uid' => 'required|string|max:32',
+        ]);
+
+        $secondary = Ticket::where('uid', $validated['target_uid'])->first();
+        abort_if(! $secondary, 422, 'Target ticket not found.');
+
+        $this->ticketService->mergeTickets($ticket, $secondary, auth()->id());
+
+        return redirect()->route('admin.tickets.show', $ticket)->with('success', "Merged {$secondary->uid} into {$ticket->uid}.");
+    }
+
+    public function logTime(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $validated = $request->validate([
+            'minutes' => 'required|integer|min:1|max:1440',
+            'note' => 'nullable|string|max:255',
+            'worked_at' => 'nullable|date|before_or_equal:today',
+        ]);
+
+        $this->ticketService->logTime(
+            $ticket,
+            auth()->id(),
+            $validated['minutes'],
+            $validated['note'] ?? null,
+            $validated['worked_at'] ?? null
+        );
+
+        return back()->with('success', 'Time logged.');
     }
 
     public function suggest(Ticket $ticket): JsonResponse

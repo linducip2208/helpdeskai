@@ -57,6 +57,11 @@ class User extends Authenticatable
         return $this->hasMany(TicketReply::class);
     }
 
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);

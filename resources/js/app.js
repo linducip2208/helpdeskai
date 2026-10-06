@@ -1,5 +1,6 @@
 import './bootstrap';
 import './push';
+import './echo';
 
 import '@tabler/core/dist/js/tabler.min.js';
 

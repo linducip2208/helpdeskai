@@ -85,6 +85,11 @@ class Ticket extends Model
         return $this->hasMany(TicketAttachment::class);
     }
 
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
     public function isOpen(): bool
     {
         return ! in_array($this->status, [TicketStatus::Resolved, TicketStatus::Closed]);

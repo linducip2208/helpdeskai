@@ -34,6 +34,7 @@
                 {!! nl2br(e($ticket->body ?? '')) !!}
             </div>
             @include('tickets._attachments', ['attachments' => ($ticket->attachments ?? collect())->where('is_internal', false), 'downloadRoute' => 'user.attachments.download'])
+            @include('tickets._custom_field_values', ['customFieldValues' => $customFieldValues ?? []])
             <div class="d-flex flex-wrap gap-3 text-secondary border-top pt-3">
                 <span>Department: <strong>{{ $ticket->department->name ?? 'N/A' }}</strong></span>
                 <span>Category: <strong>{{ $ticket->category->name ?? 'N/A' }}</strong></span>
