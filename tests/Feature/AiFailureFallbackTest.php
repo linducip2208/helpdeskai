@@ -6,8 +6,8 @@ use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\TicketService;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\BypassesPairing;
 use Tests\TestCase;
 
@@ -19,6 +19,7 @@ class AiFailureFallbackTest extends TestCase
     {
         parent::setUp();
         $this->bypassPairing();
+        $this->seed(RolesAndPermissionsSeeder::class);
     }
 
     public function test_ticket_creation_works_without_ai_provider(): void
@@ -61,7 +62,6 @@ class AiFailureFallbackTest extends TestCase
     {
         $department = Department::create(['name' => 'Support', 'is_active' => true]);
         $admin = User::factory()->create();
-        Role::create(['name' => 'admin']);
         $admin->assignRole('admin');
 
         $ticket = Ticket::create([

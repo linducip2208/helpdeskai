@@ -7,6 +7,7 @@ use App\Models\EmailLog;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use Throwable;
 
 class EmailPipingService
@@ -70,7 +71,7 @@ class EmailPipingService
                 'email' => $fromEmail,
                 'password' => bcrypt(Str::random(32)),
             ]);
-            if (\Spatie\Permission\Models\Role::where('name', 'customer')->exists()) {
+            if (Role::where('name', 'customer')->exists()) {
                 $user->assignRole('customer');
             }
             $user->forceFill(['role' => 'customer'])->saveQuietly();

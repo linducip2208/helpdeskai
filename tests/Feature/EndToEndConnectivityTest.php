@@ -9,23 +9,21 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\EmailPipingService;
 use App\Services\TicketService;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\BypassesPairing;
 use Tests\TestCase;
 
 class EndToEndConnectivityTest extends TestCase
 {
-    use RefreshDatabase, BypassesPairing;
+    use BypassesPairing, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->bypassPairing();
 
-        foreach (['super-admin', 'admin', 'manager', 'agent', 'customer'] as $role) {
-            Role::create(['name' => $role]);
-        }
+        $this->seed(RolesAndPermissionsSeeder::class);
     }
 
     public function test_full_ticket_lifecycle_across_modules(): void

@@ -102,8 +102,10 @@ class TicketController extends Controller
         if ($validated['action'] === 'status_change') {
             $query->update(['status' => $validated['status']]);
         } elseif ($validated['action'] === 'assign') {
+            abort_unless($request->user()->can('tickets.assign'), 403);
             $query->update(['assigned_to' => $validated['assigned_to']]);
         } elseif ($validated['action'] === 'delete') {
+            abort_unless($request->user()->can('tickets.delete'), 403);
             $query->delete();
         }
 

@@ -37,6 +37,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'settings.manage',
             'api.manage',
             'audit.view',
+            'users.impersonate',
+            'departments.manage',
+            'categories.manage',
+            'email.manage',
+            'webhooks.manage',
             'manage_users',
             'manage_settings',
             'manage_knowledge',
@@ -76,6 +81,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'audit.view',
             'manage_users',
             'manage_knowledge',
+            'departments.manage',
+            'categories.manage',
+            'email.manage',
+            'webhooks.manage',
         ]);
 
         $agent = Role::firstOrCreate(['name' => 'agent', 'guard_name' => 'web']);

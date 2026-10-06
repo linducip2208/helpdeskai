@@ -6,9 +6,9 @@ use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Permission\Models\Role;
 use Tests\BypassesPairing;
 use Tests\TestCase;
 
@@ -20,8 +20,7 @@ class AttachmentAuthorizationTest extends TestCase
     {
         parent::setUp();
         $this->bypassPairing();
-        Role::create(['name' => 'admin']);
-        Role::create(['name' => 'customer']);
+        $this->seed(RolesAndPermissionsSeeder::class);
         Storage::fake('local');
     }
 

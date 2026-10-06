@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Department;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\SlaService;
 use App\Services\TicketService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -14,7 +16,7 @@ use Tests\TestCase;
 
 class SlaBusinessHoursTest extends TestCase
 {
-    use RefreshDatabase, BypassesPairing;
+    use BypassesPairing, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -78,7 +80,7 @@ class SlaBusinessHoursTest extends TestCase
             'sla_due_at' => now()->addDay(),
         ]);
 
-        $breached = app(\App\Services\SlaService::class)->evaluateTicket($ticket);
+        $breached = app(SlaService::class)->evaluateTicket($ticket);
 
         $this->assertTrue($breached);
         $this->assertTrue((bool) $ticket->fresh()->sla_breached);
@@ -104,14 +106,14 @@ class SlaBusinessHoursTest extends TestCase
             'sla_due_at' => now()->addMinutes(30),
         ]);
 
-        app(\App\Services\SlaService::class)->evaluateTicket($ticket);
+        app(SlaService::class)->evaluateTicket($ticket);
 
         $this->assertNotNull($ticket->fresh()->sla_warned_at);
         $this->assertDatabaseHas('activity_logs', ['action' => 'sla_warning']);
         $this->assertDatabaseHas('notifications', ['notifiable_id' => $agent->id, 'type' => 'ticket.sla_warning']);
 
         // Second run does not duplicate the warning.
-        app(\App\Services\SlaService::class)->evaluateTicket($ticket->fresh());
-        $this->assertEquals(1, \App\Models\ActivityLog::where('action', 'sla_warning')->count());
+        app(SlaService::class)->evaluateTicket($ticket->fresh());
+        $this->assertEquals(1, ActivityLog::where('action', 'sla_warning')->count());
     }
 }

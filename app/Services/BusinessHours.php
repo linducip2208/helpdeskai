@@ -43,6 +43,7 @@ class BusinessHours
         while ($remaining > 0 && $guard++ < 20000) {
             if (! self::isWorkday($cursor, $workdays, $holidays)) {
                 $cursor = self::nextWorkStart($cursor, $workdays, $workStart, $holidays);
+
                 continue;
             }
 
@@ -55,6 +56,7 @@ class BusinessHours
 
             if (! $cursor->lessThan($dayEnd)) {
                 $cursor = self::nextWorkStart($cursor->addDay(), $workdays, $workStart, $holidays);
+
                 continue;
             }
 

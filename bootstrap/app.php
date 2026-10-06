@@ -3,6 +3,7 @@
 use App\Http\Middleware\ApiAuthenticate;
 use App\Http\Middleware\ApiKeyAuth;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\EnsureTwoFactor;
 use App\Http\Middleware\RequirePair;
 use App\Http\Middleware\SetLocale;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => CheckRole::class,
+            'staff' => EnsureStaff::class,
             'api.key' => ApiKeyAuth::class,
             'api.auth' => ApiAuthenticate::class,
             '2fa' => EnsureTwoFactor::class,

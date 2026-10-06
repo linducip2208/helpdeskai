@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\TicketStatus;
 use App\Models\Category;
 use App\Models\Department;
+use App\Models\Holiday;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
@@ -13,7 +14,6 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class TicketService
@@ -467,7 +467,7 @@ class TicketService
             return $start->copy()->addMinutes($minutes);
         }
 
-        $holidays = \App\Models\Holiday::query()
+        $holidays = Holiday::query()
             ->pluck('date')
             ->map(fn ($d) => $d instanceof \DateTimeInterface ? $d->format('Y-m-d') : substr((string) $d, 0, 10))
             ->all();

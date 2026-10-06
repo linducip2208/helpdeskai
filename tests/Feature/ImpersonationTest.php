@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\BypassesPairing;
 use Tests\TestCase;
 
@@ -16,8 +16,7 @@ class ImpersonationTest extends TestCase
     {
         parent::setUp();
         $this->bypassPairing();
-        Role::create(['name' => 'admin']);
-        Role::create(['name' => 'customer']);
+        $this->seed(RolesAndPermissionsSeeder::class);
     }
 
     public function test_admin_can_impersonate_and_stop(): void

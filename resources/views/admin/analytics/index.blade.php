@@ -1,15 +1,22 @@
 @extends('layouts.admin')
 @section('title', __('Analytics'))
 @section('page-actions')
-    <a href="{{ route('admin.export.tickets', request()->only(['from','to'])) }}" class="btn">
-        {{ __('Export Tickets CSV') }}
-    </a>
-    <a href="{{ route('admin.export.sla', request()->only(['from','to'])) }}" class="btn">
-        {{ __('Export SLA CSV') }}
-    </a>
-    <a href="{{ route('admin.export.ai-usage', request()->only(['from','to'])) }}" class="btn">
-        {{ __('Export AI Usage CSV') }}
-    </a>
+    <div class="dropdown">
+        <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown">{{ __('Export CSV') }}</button>
+        <div class="dropdown-menu dropdown-menu-end">
+            <a href="{{ route('admin.export.tickets', request()->only(['from','to'])) }}" class="dropdown-item">{{ __('Export Tickets CSV') }}</a>
+            <a href="{{ route('admin.export.sla', request()->only(['from','to'])) }}" class="dropdown-item">{{ __('Export SLA CSV') }}</a>
+            <a href="{{ route('admin.export.ai-usage', request()->only(['from','to'])) }}" class="dropdown-item">{{ __('Export AI Usage CSV') }}</a>
+        </div>
+    </div>
+    <div class="dropdown">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">{{ __('Export XLSX') }}</button>
+        <div class="dropdown-menu dropdown-menu-end">
+            <a href="{{ route('admin.export.tickets.xlsx', request()->only(['from','to'])) }}" class="dropdown-item">{{ __('Export Tickets XLSX') }}</a>
+            <a href="{{ route('admin.export.sla.xlsx', request()->only(['from','to'])) }}" class="dropdown-item">{{ __('Export SLA XLSX') }}</a>
+            <a href="{{ route('admin.export.ai-usage.xlsx', request()->only(['from','to'])) }}" class="dropdown-item">{{ __('Export AI Usage XLSX') }}</a>
+        </div>
+    </div>
 @endsection
 @section('content')
 @php

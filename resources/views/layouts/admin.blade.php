@@ -48,6 +48,7 @@
         'Automation' => [
             ['route' => 'admin.sla-policies.index',    'label' => __('SLA Policies'),     'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
             ['route' => 'admin.holidays.index',          'label' => __('Holidays'),          'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+            ['route' => 'admin.holidays.index',          'label' => __('Holidays'),          'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
             ['route' => 'admin.automation-rules.index','label' => __('Automation Rules'), 'icon' => 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'],
             ['route' => 'admin.email-logs.index',      'label' => __('Email Logs'),       'icon' => 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
             ['route' => 'admin.webhooks.index',         'label' => __('Webhooks'),          'icon' => 'M13 10V3L4 14h7v7l9-11h-7z'],
@@ -76,6 +77,45 @@
         $base = preg_replace('/\.(index|show|edit|create|update|store|destroy)$/', '.*', $route);
         return request()->routeIs($base);
     };
+
+    $routePermissions = [
+        'admin.analytics.index' => 'reports.view',
+        'admin.ai-usage-logs.index' => 'reports.view',
+        'admin.activity-log.index' => 'audit.view',
+        'admin.tickets.index' => 'tickets.view',
+        'admin.conversations.index' => 'tickets.view',
+        'admin.users.index' => 'manage_users',
+        'admin.canned-responses.index' => 'manage_knowledge',
+        'admin.knowledge.index' => 'manage_knowledge',
+        'admin.knowledge-categories.index' => 'manage_knowledge',
+        'admin.knowledge-faqs.index' => 'manage_knowledge',
+        'admin.posts.index' => 'manage_knowledge',
+        'admin.services.index' => 'manage_knowledge',
+        'admin.seo-meta.index' => 'manage_knowledge',
+        'admin.ai-providers.index' => 'ai.configure',
+        'admin.ai-features.index' => 'ai.configure',
+        'admin.sla-policies.index' => 'sla.manage',
+        'admin.holidays.index' => 'sla.manage',
+        'admin.automation-rules.index' => 'automation.manage',
+        'admin.email-logs.index' => 'email.manage',
+        'admin.push-subscriptions.index' => 'settings.manage',
+        'admin.webhooks.index' => 'webhooks.manage',
+        'admin.settings.index' => 'settings.manage',
+        'admin.email-templates.index' => 'email.manage',
+        'admin.license.index' => 'settings.manage',
+        'admin.api-keys.index' => 'api.manage',
+        'admin.departments.index' => 'departments.manage',
+        'admin.categories.index' => 'categories.manage',
+        'admin.export.tickets' => 'reports.view',
+        'admin.export.agents' => 'reports.view',
+        'admin.export.sla' => 'reports.view',
+        'admin.export.ai-usage' => 'reports.view',
+    ];
+
+    $sections = collect($sections)
+        ->map(fn ($items) => collect($items)->reject(fn ($item) => isset($routePermissions[$item['route']]) && ! auth()->user()->can($routePermissions[$item['route']]))->values()->all())
+        ->filter(fn ($items) => count($items) > 0)
+        ->all();
 @endphp
 
     {{-- Sidebar --}}

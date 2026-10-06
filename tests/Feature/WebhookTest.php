@@ -10,23 +10,22 @@ use App\Models\WebhookDelivery;
 use App\Models\WebhookEndpoint;
 use App\Services\TicketService;
 use App\Services\WebhookService;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
-use Spatie\Permission\Models\Role;
 use Tests\BypassesPairing;
 use Tests\TestCase;
 
 class WebhookTest extends TestCase
 {
-    use RefreshDatabase, BypassesPairing;
+    use BypassesPairing, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->bypassPairing();
-        Role::create(['name' => 'admin']);
-        Role::create(['name' => 'customer']);
+        $this->seed(RolesAndPermissionsSeeder::class);
     }
 
     private function endpoint(array $overrides = []): WebhookEndpoint

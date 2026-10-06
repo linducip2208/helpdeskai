@@ -7,6 +7,7 @@ use App\Models\AiUsageLog;
 use App\Models\Ticket;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class ReportService
 {
@@ -171,7 +172,7 @@ class ReportService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{name: string, assigned: int, resolved: int, open: int, avg_response: ?string, csat: ?float}>
+     * @return Collection<int, array{name: string, assigned: int, resolved: int, open: int, avg_response: ?string, csat: ?float}>
      */
     public function agentPerformance(?string $from = null, ?string $to = null)
     {
