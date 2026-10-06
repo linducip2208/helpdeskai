@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /blog
+Allow: /best-helpdesk-software
+Allow: /compare/
+Allow: /alternatives-to/
+Disallow: /admin
+Disallow: /api
+Disallow: /__pair
+Disallow: /webhooks
+
+Sitemap: /sitemap.xml
