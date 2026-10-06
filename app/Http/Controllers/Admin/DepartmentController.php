@@ -33,7 +33,7 @@ class DepartmentController extends Controller
 
         $department = Department::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'department_create', Department::class, $department->id, $department->name);
+        ActivityLogService::logCustom(auth()->id(), 'department_create', Department::class, $department->id, $department->name);
 
         return redirect()->route('admin.departments.index')->with('success', 'Department created.');
     }
@@ -48,14 +48,14 @@ class DepartmentController extends Controller
     public function update(Request $request, Department $department): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:departments,name,' . $department->id,
+            'name' => 'required|string|max:255|unique:departments,name,'.$department->id,
             'description' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
 
         $department->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'department_update', Department::class, $department->id, $department->name);
+        ActivityLogService::logCustom(auth()->id(), 'department_update', Department::class, $department->id, $department->name);
 
         return redirect()->route('admin.departments.index')->with('success', 'Department updated.');
     }
@@ -68,7 +68,7 @@ class DepartmentController extends Controller
 
         $department->delete();
 
-        ActivityLogService::log(auth()->id(), 'department_delete', Department::class, $department->id, $department->name);
+        ActivityLogService::logCustom(auth()->id(), 'department_delete', Department::class, $department->id, $department->name);
 
         return redirect()->route('admin.departments.index')->with('success', 'Department deleted.');
     }

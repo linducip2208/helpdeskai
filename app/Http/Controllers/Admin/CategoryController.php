@@ -16,7 +16,7 @@ class CategoryController extends Controller
     public function index(Request $request): View
     {
         $categories = Category::with('department')
-            ->when($request->department_id, fn($q) => $q->where('department_id', $request->department_id))
+            ->when($request->department_id, fn ($q) => $q->where('department_id', $request->department_id))
             ->withCount('tickets')
             ->latest()
             ->get();
@@ -47,7 +47,7 @@ class CategoryController extends Controller
 
         $category = Category::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'category_create', Category::class, $category->id, $category->name);
+        ActivityLogService::logCustom(auth()->id(), 'category_create', Category::class, $category->id, $category->name);
 
         return redirect()->route('admin.categories.index')->with('success', 'Category created.');
     }
@@ -73,7 +73,7 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'category_update', Category::class, $category->id, $category->name);
+        ActivityLogService::logCustom(auth()->id(), 'category_update', Category::class, $category->id, $category->name);
 
         return redirect()->route('admin.categories.index')->with('success', 'Category updated.');
     }
@@ -86,7 +86,7 @@ class CategoryController extends Controller
 
         $category->delete();
 
-        ActivityLogService::log(auth()->id(), 'category_delete', Category::class, $category->id, $category->name);
+        ActivityLogService::logCustom(auth()->id(), 'category_delete', Category::class, $category->id, $category->name);
 
         return redirect()->route('admin.categories.index')->with('success', 'Category deleted.');
     }

@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 class BackupDatabase extends Command
@@ -22,23 +21,23 @@ class BackupDatabase extends Command
             return self::SUCCESS;
         }
 
-        $db = config("database.connections.mysql");
-        $filename = 'backup-' . now()->format('Y-m-d_His') . '.sql';
+        $db = config('database.connections.mysql');
+        $filename = 'backup-'.now()->format('Y-m-d_His').'.sql';
         $dir = storage_path('app/backups');
 
         if (! is_dir($dir)) {
             mkdir($dir, 0775, true);
         }
 
-        $path = $dir . DIRECTORY_SEPARATOR . $filename;
+        $path = $dir.DIRECTORY_SEPARATOR.$filename;
         $mysqldump = env('MYSQLDUMP_PATH', 'mysqldump');
 
         $args = [
             $mysqldump,
-            '--host=' . $db['host'],
-            '--port=' . $db['port'],
-            '--user=' . $db['username'],
-            '--password=' . $db['password'],
+            '--host='.$db['host'],
+            '--port='.$db['port'],
+            '--user='.$db['username'],
+            '--password='.$db['password'],
             '--single-transaction',
             '--quick',
             '--skip-lock-tables',
@@ -58,21 +57,21 @@ class BackupDatabase extends Command
 
         if (! $process->isSuccessful()) {
             @unlink($path);
-            $this->error('Backup failed: ' . $process->getErrorOutput());
+            $this->error('Backup failed: '.$process->getErrorOutput());
 
             return self::FAILURE;
         }
 
         $this->pruneOld($dir, (int) $this->option('keep'));
 
-        $this->info('Backup written to ' . $path);
+        $this->info('Backup written to '.$path);
 
         return self::SUCCESS;
     }
 
     private function pruneOld(string $dir, int $keep): void
     {
-        $files = collect(glob($dir . DIRECTORY_SEPARATOR . 'backup-*.sql'))
+        $files = collect(glob($dir.DIRECTORY_SEPARATOR.'backup-*.sql'))
             ->sortDesc()
             ->values();
 

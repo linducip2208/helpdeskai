@@ -44,7 +44,7 @@ composer run dev
 |-----|---------|
 | `http://localhost:8000` | Main application |
 | `http://localhost:8000/admin` | Admin panel |
-| `http://localhost:5173` | Vite HMR (for Vue dev) |
+| `http://localhost:5173` | Vite HMR (Blade + Alpine + Tabler dev) |
 | `ws://localhost:8080` | Reverb WebSocket |
 
 ---
@@ -100,36 +100,39 @@ chore: Update composer dependencies
 - Use attribute casting via `casts()` method
 - Relations should return type-hinted relation objects
 
-### Vue 3
+### Blade + Alpine.js
 
-**Component Naming:**
-- Files: `PascalCase.vue` — `TicketList.vue`, `ChatWidget.vue`
-- Template tags: `PascalCase` or `kebab-case`
+**View files:**
+- Files: `kebab-case.blade.php` — `resources/views/tickets/index.blade.php`
+- Layouts: `resources/views/layouts/{app,admin,guest}.blade.php`
+- Components: `resources/views/components/*.blade.php` or `<x-*>` anonymous components
 
-**Composition API Preference:**
-```vue
-<script setup>
-import { ref, computed } from 'vue'
-
-const count = ref(0)
-const doubled = computed(() => count.value * 2)
-</script>
+**Alpine.js for interactivity (no build step):**
+```html
+<div x-data="{ open: false }">
+    <button @click="open = !open">Toggle</button>
+    <div x-show="open" x-cloak>Details...</div>
+</div>
 ```
 
-**Props:**
-```vue
-<script setup>
-defineProps({
-  ticket: { type: Object, required: true },
-  showActions: { type: Boolean, default: true },
-})
-</script>
-```
+**Rules:**
+- Keep JS inline via `x-data` / `x-show` / `@click`; no `.vue` SFC files
+- Global setup lives in `resources/js/app.js` (`Alpine.start()`, Tabler JS, `window.ApexCharts`)
 
-### TailwindCSS
-- Use utility classes directly in templates
-- Extract repeated patterns to `@apply` in CSS only when truly repetitive
-- Follow mobile-first approach (`sm:`, `md:`, `lg:`)
+### Tabler CSS (local bundle, CDN dilarang)
+
+- Install via npm (sudah ada di `package.json`): `npm install @tabler/core`
+- Import CSS di `resources/css/app.css`:
+```css
+@import '@tabler/core/dist/css/tabler.min.css';
+```
+- Import JS di `resources/js/app.js`:
+```js
+import '@tabler/core/dist/js/tabler.min.js';
+```
+- **JANGAN pakai CDN** (`cdn.jsdelivr.net`, `unpkg.com`, dsb.) — semua aset harus dibundel lokal via Vite agar bisa offline dan versioned di `public/build`
+- Build: `npm run build` → output versioned ke `public/build` (cek via `@vite` di layout)
+- Gunakan kelas Tabler (`card`, `btn`, `badge`, `table`, `page-wrapper`, `container-xl`) + utility Tabler (`d-flex`, `gap-2`, `mt-3`)
 
 ---
 
@@ -146,8 +149,8 @@ defineProps({
 | New Seeder | `database/seeders/FeatureSeeder.php` |
 | New Service | `app/Services/ServiceName.php` |
 | New Enum | `app/Enums/EnumName.php` |
-| New Vue Page | `resources/js/Pages/Feature/Page.vue` |
-| New Vue Component | `resources/js/Components/Component.vue` |
+| New Blade View | `resources/views/feature/index.blade.php` |
+| New Blade Component | `resources/views/components/component.blade.php` |
 | New Config | `config/feature.php` |
 | New Route (web) | `routes/web.php` |
 | New Route (api) | `routes/api.php` |
@@ -299,15 +302,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 });
 ```
 
-#### 6. Vue Pages
-Create page components:
+#### 6. Blade Views
+Create Blade view files:
 ```
-resources/js/Pages/Feature/
-├── Index.vue
-├── Show.vue
-├── Create.vue
-└── Edit.vue
+resources/views/feature/
+├── index.blade.php
+├── show.blade.php
+├── create.blade.php
+└── edit.blade.php
 ```
+(Extend `layouts/app.blade.php` or `layouts/admin.blade.php`, use Tabler classes + Alpine.js for interactivity.)
 
 #### 7. Permissions
 Add permissions in `RolesAndPermissionsSeeder.php`:
@@ -432,7 +436,7 @@ public function bestCategoryYear(string $category, int $year)
         abort(404);
     }
     
-    return Inertia::render('Seo/BestCategory', [
+    return view('seo.best-category', [
         'category' => $categoryModel,
         'year' => $year,
         'services' => $services,
@@ -443,12 +447,14 @@ public function bestCategoryYear(string $category, int $year)
 }
 ```
 
-#### 3. Create Vue Page
-```vue
-<!-- resources/js/Pages/Seo/BestCategory.vue -->
-<script setup>
-defineProps({ category: Object, year: Number, services: Array, faqs: Array })
-</script>
+#### 3. Create Blade View
+```blade
+{{-- resources/views/seo/best-category.blade.php --}}
+@extends('layouts.app')
+@section('content')
+    <h1>{{ $category->name }} ({{ $year }})</h1>
+    {{-- loop $services, render $faqs --}}
+@endsection
 ```
 
 #### 4. Add to Sitemap Generator

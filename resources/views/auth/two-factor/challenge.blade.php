@@ -1,25 +1,29 @@
 <x-guest-layout>
-    <h2 class="text-xl font-semibold text-gray-800 mb-2">Two-Factor Verification</h2>
-    <p class="text-sm text-gray-600 mb-4">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+    <div class="card card-md">
+        <div class="card-body">
+            <h2 class="h2 text-center mb-1">{{ __('Two-Factor Verification') }}</h2>
+            <p class="text-muted text-center mb-4">{{ __('Enter the 6-digit code from your authenticator app, or one of your recovery codes.') }}</p>
 
-    <form method="POST" action="{{ route('two-factor.verify') }}" class="space-y-3">
-        @csrf
-        <div>
-            <input type="text" name="code" autocomplete="one-time-code" autofocus required
-                placeholder="123456 or recovery code"
-                class="w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 tracking-widest text-center text-lg">
-            @error('code')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
+            <form method="POST" action="{{ route('two-factor.verify') }}" autocomplete="off">
+                @csrf
+                <div class="mb-3">
+                    <input type="text" name="code" autocomplete="one-time-code" autofocus required
+                        placeholder="123456" inputmode="numeric"
+                        class="form-control form-control-lg text-center font-monospace">
+                    @error('code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="form-footer">
+                    <button type="submit" class="btn btn-primary w-100">{{ __('Verify') }}</button>
+                </div>
+            </form>
+
+            <div class="text-center mt-3">
+                <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-link btn-sm">{{ __('Sign out') }}</button>
+                </form>
+            </div>
         </div>
-
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-md">
-            Verify
-        </button>
-    </form>
-
-    <div class="mt-4 text-center">
-        <form method="POST" action="{{ route('logout') }}" class="inline">
-            @csrf
-            <button type="submit" class="text-sm text-gray-600 hover:text-gray-900">Sign out</button>
-        </form>
     </div>
 </x-guest-layout>

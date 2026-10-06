@@ -24,8 +24,8 @@ class EmailLogController extends Controller
             $q = $request->q;
             $query->where(function ($w) use ($q) {
                 $w->where('from_email', 'like', "%{$q}%")
-                  ->orWhere('to_email', 'like', "%{$q}%")
-                  ->orWhere('subject', 'like', "%{$q}%");
+                    ->orWhere('to_email', 'like', "%{$q}%")
+                    ->orWhere('subject', 'like', "%{$q}%");
             });
         }
 

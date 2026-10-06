@@ -2,43 +2,47 @@
 @section('title', 'Add Canned Response')
 @section('content')
 
-<div class="max-w-2xl mx-auto space-y-6">
-    <div>
-        <a href="{{ route('admin.canned-responses.index') }}" class="text-sm text-indigo-600 hover:text-indigo-700">&larr; Back to Canned Responses</a>
-        <h2 class="text-2xl font-bold text-slate-900 mt-1">Add Canned Response</h2>
-    </div>
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="mb-3">
+            <a href="{{ route('admin.canned-responses.index') }}">&larr; Back to Canned Responses</a>
+        </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <form action="{{ route('admin.canned-responses.store') }}" method="POST">
             @csrf
-            <div class="space-y-5">
-                <div>
-                    <label for="title" class="block text-sm font-medium text-slate-700 mb-1">Title</label>
-                    <input type="text" name="title" id="title" value="{{ old('title') }}" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Add Canned Response</h3>
                 </div>
-                <div>
-                    <label for="category_id" class="block text-sm font-medium text-slate-700 mb-1">Category</label>
-                    <select name="category_id" id="category_id" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                        <option value="">— None —</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title</label>
+                        <input type="text" name="title" id="title" value="{{ old('title') }}" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select name="category_id" id="category_id" class="form-select">
+                            <option value="">— None —</option>
+                            @foreach($categories ?? [] as $cat)
+                                <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="body" class="form-label">Response Body</label>
+                        <textarea name="body" id="body" rows="8" class="form-control" required>{{ old('body') }}</textarea>
+                        <div class="form-hint">You can use variables like @{{name}} or @{{ticket_id}} that get replaced when inserted.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-check">
+                            <input type="checkbox" name="is_active" value="1" checked class="form-check-input">
+                            <span class="form-check-label">Active</span>
+                        </label>
+                    </div>
                 </div>
-                <div>
-                    <label for="body" class="block text-sm font-medium text-slate-700 mb-1">Response Body</label>
-                    <textarea name="body" id="body" rows="8" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>{{ old('body') }}</textarea>
-                    <p class="mt-1 text-xs text-slate-400">You can use variables like @{{name}} or @{{ticket_id}} that get replaced when inserted.</p>
-                </div>
-                <div class="flex items-center">
-                    <label class="inline-flex items-center text-sm text-slate-700">
-                        <input type="checkbox" name="is_active" value="1" checked class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2">
-                        Active
-                    </label>
-                </div>
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-                    <a href="{{ route('admin.canned-responses.index') }}" class="px-6 py-2.5 border border-gray-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-gray-50">Cancel</a>
-                    <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Save Response</button>
+                <div class="card-footer d-flex justify-content-end gap-2">
+                    <a href="{{ route('admin.canned-responses.index') }}" class="btn">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Response</button>
                 </div>
             </div>
         </form>

@@ -37,25 +37,25 @@ class IndexNowSubmit extends Command
             url('/knowledge-base'),
             url('/docs'),
             url('/best-helpdesk-software'),
-            url('/best-helpdesk-software/' . date('Y')),
+            url('/best-helpdesk-software/'.date('Y')),
         ];
 
         if (Schema::hasTable('posts')) {
             foreach (Post::where('status', 'published')->pluck('slug') as $slug) {
-                $urls[] = url('/blog/' . $slug);
+                $urls[] = url('/blog/'.$slug);
             }
         }
 
         if (Schema::hasTable('knowledge_articles')) {
             foreach (KnowledgeArticle::where('status', 'published')->pluck('slug') as $slug) {
-                $urls[] = url('/knowledge-base/' . $slug);
+                $urls[] = url('/knowledge-base/'.$slug);
             }
         }
 
         if (Schema::hasTable('services')) {
             foreach (Service::where('is_active', true)->pluck('slug') as $slug) {
-                $urls[] = url('/services/' . $slug);
-                $urls[] = url('/alternatives-to/' . $slug);
+                $urls[] = url('/services/'.$slug);
+                $urls[] = url('/alternatives-to/'.$slug);
             }
         }
 

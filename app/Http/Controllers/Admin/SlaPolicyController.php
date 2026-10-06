@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\SlaPolicy;
 use App\Models\Department;
+use App\Models\SlaPolicy;
 use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,7 +40,7 @@ class SlaPolicyController extends Controller
 
         $policy = SlaPolicy::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'sla_create', SlaPolicy::class, $policy->id, $policy->name);
+        ActivityLogService::logCustom(auth()->id(), 'sla_create', SlaPolicy::class, $policy->id, $policy->name);
 
         return redirect()->route('admin.sla-policies.index')->with('success', 'SLA policy created.');
     }
@@ -67,7 +67,7 @@ class SlaPolicyController extends Controller
 
         $slaPolicy->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'sla_update', SlaPolicy::class, $slaPolicy->id, $slaPolicy->name);
+        ActivityLogService::logCustom(auth()->id(), 'sla_update', SlaPolicy::class, $slaPolicy->id, $slaPolicy->name);
 
         return redirect()->route('admin.sla-policies.index')->with('success', 'SLA policy updated.');
     }
@@ -76,7 +76,7 @@ class SlaPolicyController extends Controller
     {
         $slaPolicy->delete();
 
-        ActivityLogService::log(auth()->id(), 'sla_delete', SlaPolicy::class, $slaPolicy->id, $slaPolicy->name);
+        ActivityLogService::logCustom(auth()->id(), 'sla_delete', SlaPolicy::class, $slaPolicy->id, $slaPolicy->name);
 
         return redirect()->route('admin.sla-policies.index')->with('success', 'SLA policy deleted.');
     }

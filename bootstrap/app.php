@@ -1,8 +1,17 @@
 <?php
 
+use App\Http\Middleware\ApiAuthenticate;
+use App\Http\Middleware\ApiKeyAuth;
+use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureTwoFactor;
+use App\Http\Middleware\RequirePair;
+use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,16 +23,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\RequirePair::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            RequirePair::class,
+            SetLocale::class,
+            AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\CheckRole::class,
-            'api.key' => \App\Http\Middleware\ApiKeyAuth::class,
-            '2fa' => \App\Http\Middleware\EnsureTwoFactor::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'role' => CheckRole::class,
+            'api.key' => ApiKeyAuth::class,
+            'api.auth' => ApiAuthenticate::class,
+            '2fa' => EnsureTwoFactor::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

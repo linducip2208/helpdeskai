@@ -76,7 +76,7 @@ class KnowledgeBaseController extends Controller
                 ->where('status', 'published')
                 ->where(function ($q) use ($query) {
                     $q->where('title', 'like', "%{$query}%")
-                      ->orWhere('content', 'like', "%{$query}%");
+                        ->orWhere('content', 'like', "%{$query}%");
                 })
                 ->latest()
                 ->paginate(15)

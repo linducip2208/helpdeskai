@@ -2,7 +2,7 @@
 
 ## What is HelpDesk AI?
 
-**HelpDesk AI** is a full-stack, production-ready **help desk & customer support platform** built on Laravel 13 with Vue 3, Inertia, TailwindCSS, and Reverb WebSockets. It provides enterprise-grade ticket management, AI-powered intelligence, real-time live chat, knowledge base, analytics, email piping, automation rules, SLA management, REST API, and programmatic SEO — all in one monolith.
+**HelpDesk AI** is a full-stack, production-ready **help desk & customer support platform** built on Laravel 13 with Blade views, Alpine.js, Tabler CSS (bundled locally via Vite from npm `@tabler/core`, no CDN), and Reverb WebSockets. It provides enterprise-grade ticket management, AI-powered intelligence, real-time live chat, knowledge base, analytics, email piping, automation rules, SLA management, REST API, and programmatic SEO — all in one monolith.
 
 Key differentiators:
 - **AI features classify, suggest, analyze sentiment** on every ticket — without hardcoding any AI provider
@@ -20,14 +20,14 @@ Key differentiators:
 | Backend Framework | Laravel | 13.x |
 | PHP | PHP | 8.3+ |
 | Database | MySQL / SQLite | 8.0+ / 3.x |
-| Frontend | Vue 3 + Inertia.js | 3.4+ / 2.x |
-| CSS | TailwindCSS | 3.x |
+| Frontend | Blade views + Alpine.js | Blade / 3.x |
+| CSS | Tabler CSS via npm `@tabler/core` (local Vite bundle, no CDN) | 1.6+ |
 | Build Tool | Vite | 8.x |
 | WebSocket Server | Laravel Reverb | 1.10+ |
 | Auth + RBAC | Laravel Breeze + Spatie Permission | 2.4+ / 7.4+ |
 | API Auth | Laravel Sanctum | 4.x |
 | PDF Export | barryvdh/laravel-dompdf | 3.x |
-| Routing (JS) | tightenco/ziggy | 2.x |
+| Charts | ApexCharts via npm | 7.x |
 
 ---
 
@@ -102,7 +102,7 @@ helpdeskai/
 │   ├── Enums/                # TicketStatus enum
 │   ├── Http/
 │   │   ├── Controllers/      # Web controllers (Admin/, Auth/)
-│   │   ├── Middleware/        # HandleInertiaRequests
+│   │   ├── Middleware/        # CheckRole, ApiKeyAuth
 │   │   └── Requests/         # Form requests
 │   ├── Models/               # 26 Eloquent models
 │   └── Providers/            # Service providers
@@ -114,8 +114,8 @@ helpdeskai/
 ├── docs/                     # Documentation (you are here)
 ├── public/                   # Public web root
 ├── resources/
-│   ├── css/                  # TailwindCSS
-│   ├── js/                   # Vue 3 + Inertia components
+│   ├── css/                  # Tabler CSS (local @tabler/core import)
+│   ├── js/                   # Alpine.js + ApexCharts (app.js, bootstrap.js)
 │   └── views/                # Blade templates
 ├── routes/
 │   ├── web.php               # Web routes (113 lines)
@@ -126,9 +126,8 @@ helpdeskai/
 ├── tests/                    # PHPUnit tests
 ├── .env.example              # Environment template
 ├── composer.json             # PHP dependencies
-├── package.json              # Node dependencies
-├── tailwind.config.js
-└── vite.config.js
+├── package.json              # Node dependencies (@tabler/core, alpinejs, apexcharts)
+└── vite.config.js              # builds resources/{css,js} to public/build
 ```
 
 ---

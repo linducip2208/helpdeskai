@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\KnowledgeFaq;
 use App\Models\KnowledgeCategory;
+use App\Models\KnowledgeFaq;
 use App\Services\ActivityLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +15,7 @@ class KnowledgeFaqController extends Controller
     public function index(Request $request): View
     {
         $faqs = KnowledgeFaq::with('category')
-            ->when($request->category_id, fn($q) => $q->where('category_id', $request->category_id))
+            ->when($request->category_id, fn ($q) => $q->where('category_id', $request->category_id))
             ->orderBy('sort_order')
             ->get();
 
@@ -44,7 +44,7 @@ class KnowledgeFaqController extends Controller
 
         $faq = KnowledgeFaq::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'faq_create', KnowledgeFaq::class, $faq->id, $faq->question);
+        ActivityLogService::logCustom(auth()->id(), 'faq_create', KnowledgeFaq::class, $faq->id, $faq->question);
 
         return redirect()->route('admin.knowledge-faqs.index')->with('success', 'FAQ created.');
     }
@@ -69,7 +69,7 @@ class KnowledgeFaqController extends Controller
 
         $knowledgeFaq->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'faq_update', KnowledgeFaq::class, $knowledgeFaq->id, $knowledgeFaq->question);
+        ActivityLogService::logCustom(auth()->id(), 'faq_update', KnowledgeFaq::class, $knowledgeFaq->id, $knowledgeFaq->question);
 
         return redirect()->route('admin.knowledge-faqs.index')->with('success', 'FAQ updated.');
     }
@@ -78,7 +78,7 @@ class KnowledgeFaqController extends Controller
     {
         $knowledgeFaq->delete();
 
-        ActivityLogService::log(auth()->id(), 'faq_delete', KnowledgeFaq::class, $knowledgeFaq->id, $knowledgeFaq->question);
+        ActivityLogService::logCustom(auth()->id(), 'faq_delete', KnowledgeFaq::class, $knowledgeFaq->id, $knowledgeFaq->question);
 
         return redirect()->route('admin.knowledge-faqs.index')->with('success', 'FAQ deleted.');
     }

@@ -12,8 +12,8 @@ class ActivityLogController extends Controller
     public function index(Request $request): View
     {
         $logs = ActivityLog::with('user')
-            ->when($request->action, fn($q) => $q->where('action', $request->action))
-            ->when($request->search, fn($q) => $q->where('target_label', 'like', "%{$request->search}%"))
+            ->when($request->action, fn ($q) => $q->where('action', $request->action))
+            ->when($request->search, fn ($q) => $q->where('target_label', 'like', "%{$request->search}%"))
             ->latest()
             ->paginate(50);
 

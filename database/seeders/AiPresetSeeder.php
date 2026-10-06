@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\AiPreset;
 use Illuminate\Database\Seeder;
 
 class AiPresetSeeder extends Seeder
@@ -199,10 +198,10 @@ class AiPresetSeeder extends Seeder
         }
 
         foreach ($presets as $preset) {
-            $filename = $preset['name'] . '.json';
+            $filename = $preset['name'].'.json';
             unset($preset['name']);
             file_put_contents(
-                $presetPath . '/' . $filename,
+                $presetPath.'/'.$filename,
                 json_encode($preset, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             );
         }

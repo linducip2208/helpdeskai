@@ -2,70 +2,71 @@
 @section('title', 'License Status')
 @section('content')
 
-<div class="max-w-3xl mx-auto space-y-6">
-    <div>
-        <h2 class="text-2xl font-bold text-slate-900">License Status</h2>
-        <p class="text-sm text-slate-500 mt-1">Status license whitelabel.co.id untuk domain ini.</p>
-    </div>
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+        <p class="text-muted mb-3">Status license whitelabel.co.id untuk domain ini.</p>
 
-    <div class="bg-white rounded-xl border border-gray-100 p-6 space-y-4">
-        <div class="flex items-center gap-3">
-            @if($paired)
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700">Paired &amp; Valid</span>
-            @else
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-700">Not Paired / Invalid</span>
-            @endif
-            <span class="font-mono text-sm text-slate-600">{{ $domain }}</span>
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    @if($paired)
+                        <span class="badge bg-green-lt">Paired &amp; Valid</span>
+                    @else
+                        <span class="badge bg-red-lt">Not Paired / Invalid</span>
+                    @endif
+                    <span><code>{{ $domain }}</code></span>
+                </div>
+
+                @if($paired && $data)
+                    <div class="row g-2 border-top pt-3">
+                        <div class="col-md-6">
+                            <div class="text-muted">Product</div>
+                            <div>{{ $data['product'] ?? $data['product_name'] ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted">Plan / Tier</div>
+                            <div>{{ $data['plan'] ?? $data['tier'] ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted">Activated</div>
+                            <div>{{ $data['activated_at'] ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted">Expires</div>
+                            <div>{{ $data['expires_at'] ?? 'Lifetime' }}</div>
+                        </div>
+                        @if(! empty($data['licensee_email']))
+                            <div class="col-md-6">
+                                <div class="text-muted">Licensee</div>
+                                <div>{{ $data['licensee_email'] }}</div>
+                            </div>
+                        @endif
+                        @if(! empty($data['activation_key']))
+                            <div class="col-md-6">
+                                <div class="text-muted">Activation Key</div>
+                                <div><code>{{ \Illuminate\Support\Str::mask($data['activation_key'], '*', 4, -4) }}</code></div>
+                            </div>
+                        @endif
+                    </div>
+
+                    <details class="mt-3 border-top pt-3">
+                        <summary class="text-muted">Raw payload</summary>
+                        <pre class="mt-2">{{ json_encode($data, JSON_PRETTY_PRINT) }}</pre>
+                    </details>
+                @else
+                    <div class="border-top pt-3">
+                        <p class="text-muted">License lock file missing, expired, atau invalid untuk domain <code>{{ $domain }}</code>.</p>
+                        <a href="{{ url('/__pair') }}" class="btn btn-primary">Open Pairing Wizard &rarr;</a>
+                    </div>
+                @endif
+            </div>
         </div>
 
-        @if($paired && $data)
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-                <div>
-                    <p class="text-xs text-slate-500">Product</p>
-                    <p class="font-medium text-slate-900">{{ $data['product'] ?? $data['product_name'] ?? '—' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-slate-500">Plan / Tier</p>
-                    <p class="font-medium text-slate-900">{{ $data['plan'] ?? $data['tier'] ?? '—' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-slate-500">Activated</p>
-                    <p class="font-medium text-slate-900">{{ $data['activated_at'] ?? '—' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-slate-500">Expires</p>
-                    <p class="font-medium text-slate-900">{{ $data['expires_at'] ?? 'Lifetime' }}</p>
-                </div>
-                @if(! empty($data['licensee_email']))
-                    <div>
-                        <p class="text-xs text-slate-500">Licensee</p>
-                        <p class="font-medium text-slate-900">{{ $data['licensee_email'] }}</p>
-                    </div>
-                @endif
-                @if(! empty($data['activation_key']))
-                    <div>
-                        <p class="text-xs text-slate-500">Activation Key</p>
-                        <p class="font-mono text-xs text-slate-700">{{ \Illuminate\Support\Str::mask($data['activation_key'], '*', 4, -4) }}</p>
-                    </div>
-                @endif
-            </div>
-
-            <details class="pt-4 border-t border-gray-100">
-                <summary class="text-sm text-slate-500 cursor-pointer">Raw payload</summary>
-                <pre class="bg-gray-50 text-xs p-3 rounded mt-2 overflow-x-auto">{{ json_encode($data, JSON_PRETTY_PRINT) }}</pre>
-            </details>
-        @else
-            <div class="pt-4 border-t border-gray-100 space-y-3">
-                <p class="text-sm text-slate-600">License lock file missing, expired, atau invalid untuk domain <code class="font-mono">{{ $domain }}</code>.</p>
-                <a href="{{ url('/__pair') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Open Pairing Wizard &rarr;</a>
-            </div>
-        @endif
-    </div>
-
-    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900">
-        <p class="font-semibold mb-1">Tentang License v3</p>
-        <p>Lock file di <code class="font-mono">.license.lock</code> (encrypted AES-256-GCM + RSA-signed payload). Heartbeat ke marketplace tiap 24 jam dengan grace 7 hari kalau marketplace offline.</p>
-        <p class="mt-1">Marketplace: <a href="{{ $marketplaceUrl }}" target="_blank" class="underline">{{ $marketplaceUrl ?: 'belum diset di .env' }}</a></p>
+        <div class="alert alert-warning">
+            <p class="mb-1"><strong>Tentang License v3</strong></p>
+            <p class="mb-1">Lock file di <code>.license.lock</code> (encrypted AES-256-GCM + RSA-signed payload). Heartbeat ke marketplace tiap 24 jam dengan grace 7 hari kalau marketplace offline.</p>
+            <p class="mb-0">Marketplace: <a href="{{ $marketplaceUrl }}" target="_blank">{{ $marketplaceUrl ?: 'belum diset di .env' }}</a></p>
+        </div>
     </div>
 </div>
 

@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\Ticket;
-use App\Models\TicketReply;
-use App\Models\Department;
 use App\Models\Category;
+use App\Models\Department;
+use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Services\TicketService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketController extends Controller
 {
@@ -25,7 +27,7 @@ class TicketController extends Controller
     {
         $tickets = Ticket::where('user_id', auth()->id())
             ->with(['department', 'assignedTo'])
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
             ->latest()
             ->paginate(15);
 
@@ -60,7 +62,7 @@ class TicketController extends Controller
     {
         abort_unless($ticket->user_id === auth()->id(), 403);
 
-        $ticket->load(['user', 'assignedTo', 'department', 'category', 'replies.user', 'attachments']);
+        $ticket->load(['user', 'assignedTo', 'department', 'category', 'replies.user', 'replies.attachments', 'attachments']);
 
         return view('user.tickets.show', ['ticket' => $ticket]);
     }
@@ -69,10 +71,28 @@ class TicketController extends Controller
     {
         abort_unless($ticket->user_id === auth()->id(), 403);
 
-        $request->validate(['body' => 'required|string']);
+        $validated = $request->validate(array_merge(
+            ['body' => 'required|string|max:20000'],
+            TicketService::attachmentRules()
+        ));
 
-        $this->ticketService->addReply($ticket, auth()->id(), $request->body, false);
+        $reply = $this->ticketService->addReply($ticket, auth()->id(), $validated['body'], false);
+
+        if (! empty($validated['attachments'])) {
+            $this->ticketService->addAttachments($ticket, $reply, $validated['attachments'], auth()->id(), false);
+        }
 
         return redirect()->back()->with('success', 'Reply sent.');
+    }
+
+    public function downloadAttachment(TicketAttachment $attachment): StreamedResponse
+    {
+        abort_unless($attachment->ticket->user_id === auth()->id(), 403);
+        abort_if($attachment->is_internal, 403);
+
+        $path = $attachment->path;
+        abort_unless($path && Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->download($path, $attachment->original_name);
     }
 }

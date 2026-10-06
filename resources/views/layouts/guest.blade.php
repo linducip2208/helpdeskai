@@ -5,28 +5,23 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'HelpDesk AI') }}</title>
 
         <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#0f172a">
+        <meta name="theme-color" content="#066fd1">
         <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100 dark:bg-gray-900">
-            <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
-            </div>
-
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white dark:bg-gray-800 shadow-md overflow-hidden sm:rounded-lg">
+    <body class="d-flex flex-column">
+        <div class="page page-center">
+            <div class="container container-tight py-4">
+                <div class="text-center mb-4">
+                    <a href="/" class="navbar-brand navbar-brand-autodark d-inline-flex align-items-center gap-2">
+                        <x-application-logo width="40" height="40" />
+                        <span class="fw-bold fs-2">{{ config('app.name', 'HelpDesk AI') }}</span>
+                    </a>
+                </div>
                 {{ $slot }}
             </div>
         </div>

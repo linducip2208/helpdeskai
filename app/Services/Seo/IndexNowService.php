@@ -21,7 +21,7 @@ class IndexNowService
 
     public function keyLocation(): string
     {
-        return url('/' . $this->key() . '.txt');
+        return url('/'.$this->key().'.txt');
     }
 
     /**
@@ -45,7 +45,7 @@ class IndexNowService
             ->values();
 
         if (! $force) {
-            $urls = $urls->reject(fn ($url) => Cache::has(self::CACHE_PREFIX . md5($url)))->values();
+            $urls = $urls->reject(fn ($url) => Cache::has(self::CACHE_PREFIX.md5($url)))->values();
         }
 
         if ($urls->isEmpty()) {
@@ -62,20 +62,20 @@ class IndexNowService
                 'urlList' => $urls->all(),
             ]);
         } catch (\Throwable $e) {
-            Log::warning('IndexNow submission failed: ' . $e->getMessage());
+            Log::warning('IndexNow submission failed: '.$e->getMessage());
 
             return 0;
         }
 
         if ($response->successful() || $response->status() === 202) {
             foreach ($urls as $url) {
-                Cache::put(self::CACHE_PREFIX . md5($url), true, now()->addDays(self::CACHE_TTL_DAYS));
+                Cache::put(self::CACHE_PREFIX.md5($url), true, now()->addDays(self::CACHE_TTL_DAYS));
             }
 
             return $urls->count();
         }
 
-        Log::warning('IndexNow returned status ' . $response->status() . ': ' . $response->body());
+        Log::warning('IndexNow returned status '.$response->status().': '.$response->body());
 
         return 0;
     }

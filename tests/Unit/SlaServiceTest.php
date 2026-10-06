@@ -42,7 +42,7 @@ class SlaServiceTest extends TestCase
     {
         $ticket = $this->makeTicket(['sla_due_at' => now()->subHour()]);
 
-        $breached = (new SlaService())->evaluateTicket($ticket);
+        $breached = (new SlaService)->evaluateTicket($ticket);
 
         $this->assertTrue($breached);
         $this->assertTrue((bool) $ticket->fresh()->sla_breached);
@@ -52,7 +52,7 @@ class SlaServiceTest extends TestCase
     {
         $ticket = $this->makeTicket(['sla_due_at' => now()->addDay()]);
 
-        $breached = (new SlaService())->evaluateTicket($ticket);
+        $breached = (new SlaService)->evaluateTicket($ticket);
 
         $this->assertFalse($breached);
         $this->assertFalse((bool) $ticket->fresh()->sla_breached);
@@ -62,6 +62,6 @@ class SlaServiceTest extends TestCase
     {
         $ticket = $this->makeTicket(['sla_due_at' => null]);
 
-        $this->assertFalse((new SlaService())->evaluateTicket($ticket));
+        $this->assertFalse((new SlaService)->evaluateTicket($ticket));
     }
 }

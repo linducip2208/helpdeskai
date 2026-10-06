@@ -37,13 +37,13 @@ class AnthropicAdapter implements AiAdapterInterface
                 $body['system'] = implode("\n", $systemMessages);
             }
 
-            $response = Http::timeout(120)
+            $response = Http::timeout(60)->retry(1, 500)
                 ->withHeaders([
                     'x-api-key' => $provider->decrypted_api_key,
                     'anthropic-version' => '2023-06-01',
                     'Content-Type' => 'application/json',
                 ])
-                ->post(rtrim($provider->base_url, '/') . '/v1/messages', $body);
+                ->post(rtrim($provider->base_url, '/').'/v1/messages', $body);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -59,10 +59,10 @@ class AnthropicAdapter implements AiAdapterInterface
             Log::error('Anthropic API error', [
                 'provider' => $provider->name,
                 'status' => $response->status(),
-                'body' => $response->body(),
+                'body' => substr($response->body(), 0, 2000),
             ]);
 
-            return ['error' => "API error: {$response->status()} - {$response->body()}"];
+            return ['error' => "Provider request failed (HTTP {$response->status()})."];
         } catch (\Exception $e) {
             Log::error('Anthropic request failed', [
                 'provider' => $provider->name,

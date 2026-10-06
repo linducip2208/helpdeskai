@@ -12,6 +12,31 @@ class Ticket extends Model
 {
     protected $guarded = ['id'];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Ticket $ticket) {
+            if (! $ticket->isDirty('status')) {
+                return;
+            }
+
+            $status = $ticket->status instanceof TicketStatus
+                ? $ticket->status->value
+                : (string) $ticket->status;
+
+            if (in_array($status, ['resolved', 'closed'], true) && $ticket->closed_at === null) {
+                $ticket->closed_at = now();
+            }
+
+            if ($status === 'resolved' && $ticket->resolved_at === null) {
+                $ticket->resolved_at = now();
+            }
+
+            if (in_array($status, ['open', 'in_progress', 'waiting', 'answered'], true)) {
+                $ticket->resolved_at = null;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -20,6 +45,8 @@ class Ticket extends Model
             'is_starred' => 'boolean',
             'sla_due_at' => 'datetime',
             'sla_breached' => 'boolean',
+            'first_response_at' => 'datetime',
+            'resolved_at' => 'datetime',
             'closed_at' => 'datetime',
             'ai_classification' => 'array',
             'ai_classified_at' => 'datetime',
@@ -94,7 +121,7 @@ class Ticket extends Model
         $prefix = 'TKT-';
 
         do {
-            $uid = $prefix . strtoupper(Str::random(5));
+            $uid = $prefix.strtoupper(Str::random(5));
         } while (static::where('uid', $uid)->exists());
 
         return $uid;

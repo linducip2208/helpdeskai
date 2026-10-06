@@ -277,7 +277,7 @@ Unlike SaaS tools that lock users into specific AI models and recurring fees, He
 ### MVP (v1.0.0) — Phase 0 + Phase 1
 
 **Included:**
-- Laravel scaffold with Breeze + Inertia + Vue
+- Laravel scaffold with Breeze (Blade) + Tabler CSS + Alpine.js
 - Database schema (30 tables)
 - 26 Eloquent models
 - Authentication (login, register, password reset, email verification)
@@ -329,17 +329,15 @@ Unlike SaaS tools that lock users into specific AI models and recurring fees, He
 | Package | Version | Purpose |
 |---------|---------|---------|
 | laravel/framework | 13.x | Core framework |
-| laravel/breeze | 2.4+ | Auth scaffolding (Vue/Inertia) |
+| laravel/breeze | 2.4+ | Auth scaffolding (Blade) |
 | laravel/reverb | 1.10+ | WebSocket server |
 | laravel/sanctum | 4.x | API token auth |
 | laravel/tinker | 3.x | Interactive shell |
-| inertiajs/inertia-laravel | 2.x | Inertia adapter |
 | spatie/laravel-permission | 7.4+ | Roles & permissions |
-| tightenco/ziggy | 2.x | Route names in JS |
 | barryvdh/laravel-dompdf | 3.x | PDF generation |
-| @inertiajs/vue3 | 2.x | Vue 3 + Inertia |
-| @vitejs/plugin-vue | 6.x | Vite Vue plugin |
-| tailwindcss | 3.x | CSS framework |
+| @tabler/core | 1.6+ | Tabler CSS/JS via npm (local Vite bundle, no CDN) |
+| alpinejs | 3.x | Lightweight JS interactions in Blade views |
+| apexcharts | 7.x | Dashboard charts via npm |
 
 ### Infrastructure
 

@@ -5,38 +5,61 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'HelpDesk AI') }}</title>
 
         <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#0f172a">
+        <meta name="theme-color" content="#066fd1">
         <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
         <link rel="apple-touch-icon" href="/icons/icon-192.svg">
-        <link rel="alternate" type="application/rss+xml" title="{{ config('app.name', 'Laravel') }} Blog" href="{{ url('/blog/feed.xml') }}">
+        <link rel="alternate" type="application/rss+xml" title="{{ config('app.name', 'HelpDesk AI') }} Blog" href="{{ url('/blog/feed.xml') }}">
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <body>
+        <div class="page">
             @include('layouts.navigation')
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white dark:bg-gray-800 shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
+            <div class="page-wrapper">
+                @isset($header)
+                    <div class="page-header d-print-none">
+                        <div class="container-xl">
+                            <div class="row g-2 align-items-center">
+                                <div class="col">{{ $header }}</div>
+                            </div>
+                        </div>
                     </div>
-                </header>
-            @endisset
+                @endisset
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+                <div class="page-body">
+                    <div class="container-xl">
+                        @if(session('success'))
+                            <div class="alert alert-success alert-dismissible" role="alert">
+                                <div>{{ session('success') }}</div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+                            </div>
+                        @endif
+                        @if(session('error'))
+                            <div class="alert alert-danger alert-dismissible" role="alert">
+                                <div>{{ session('error') }}</div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+                            </div>
+                        @endif
+                        {{ $slot }}
+                    </div>
+                </div>
+
+                <footer class="footer footer-transparent d-print-none">
+                    <div class="container-xl">
+                        <div class="row text-center align-items-center flex-row-reverse">
+                            <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                                <ul class="list-inline list-inline-dots mb-0">
+                                    <li class="list-inline-item">{{ config('app.name', 'HelpDesk AI') }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </div>
         </div>
         <script>
             if ('serviceWorker' in navigator) {

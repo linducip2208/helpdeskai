@@ -28,7 +28,7 @@
 - [x] User views (tickets index/show/create, conversations index/show)
 - [x] Public views (blog, services, knowledge base, contact)
 - [x] pSEO views (best-helpdesk, compare, alternatives) with JSON-LD
-- [x] All views use Tailwind CSS, rounded-xl cards, status color badges
+- [x] All views use Tabler CSS (local Vite bundle from npm, no CDN), rounded cards, status color badges
 
 ## Phase 3: Documentation ✅
 - [x] 15 MD files (~6,200 lines total)
@@ -75,7 +75,7 @@ php artisan serve
 
 ## Stack Final
 - **Backend:** Laravel 13 + PHP 8.3
-- **Frontend:** Blade + Tailwind CSS + Alpine.js (NO Vue/Inertia)
+- **Frontend:** Blade + Tabler CSS (local `@tabler/core` via Vite, no CDN) + Alpine.js + ApexCharts (NO Vue/Inertia/Tailwind)
 - **DB:** MySQL 8.0+
 - **WebSocket:** Laravel Reverb
 - **API Auth:** Laravel Sanctum

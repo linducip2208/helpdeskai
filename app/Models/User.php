@@ -14,7 +14,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     protected $fillable = [
         'name', 'email', 'password', 'avatar', 'phone',
@@ -90,6 +90,6 @@ class User extends Authenticatable
             return Storage::disk('public')->url($avatar);
         }
 
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=random';
+        return 'https://ui-avatars.com/api/?name='.urlencode($this->name).'&background=random';
     }
 }

@@ -7,9 +7,13 @@ use App\Models\Category;
 use App\Models\Department;
 use App\Models\SlaPolicy;
 use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use App\Models\TicketReply;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class TicketService
 {
@@ -45,6 +49,8 @@ class TicketService
         });
 
         $this->autoClassify($ticket);
+
+        app(AutomationService::class)->fire('ticket_created', $ticket);
 
         $this->notifyOnCreate($ticket);
 
@@ -86,6 +92,14 @@ class TicketService
             $ticket->update(['closed_at' => now()]);
         }
 
+        if ($status === TicketStatus::Resolved->value) {
+            $ticket->update(['resolved_at' => now()]);
+        }
+
+        if (in_array($status, [TicketStatus::Open->value, TicketStatus::InProgress->value], true)) {
+            $ticket->update(['resolved_at' => null]);
+        }
+
         ActivityLogService::log(
             'ticket_status_change',
             $ticket,
@@ -104,6 +118,8 @@ class TicketService
             );
         }
 
+        app(AutomationService::class)->fire('ticket_status_changed', $ticket, ['from' => $oldStatus, 'to' => $status]);
+
         return $ticket;
     }
 
@@ -120,6 +136,10 @@ class TicketService
             $ticket->update(['status' => TicketStatus::InProgress->value]);
         }
 
+        if (! $isInternal && $userId !== $ticket->user_id && $ticket->first_response_at === null) {
+            $ticket->update(['first_response_at' => now()]);
+        }
+
         ActivityLogService::log(
             'ticket_reply',
             $reply,
@@ -134,7 +154,71 @@ class TicketService
             $this->notifyOnReply($ticket, $reply, $userId);
         }
 
+        app(AutomationService::class)->fire('ticket_replied', $ticket, ['reply_id' => $reply->id, 'is_internal' => $isInternal]);
+
         return $reply;
+    }
+
+    public static function attachmentRules(): array
+    {
+        return [
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|max:10240|mimetypes:image/jpeg,image/png,image/gif,image/webp,application/pdf,text/plain,text/csv,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+    }
+
+    /**
+     * Store uploaded files as private ticket attachments.
+     *
+     * @param  array<int, UploadedFile>  $files
+     * @return array<int, TicketAttachment>
+     */
+    public function addAttachments(Ticket $ticket, ?TicketReply $reply, array $files, int $userId, bool $isInternal = false): array
+    {
+        $blockedExtensions = ['php', 'phtml', 'exe', 'sh', 'bat', 'cmd', 'com', 'js', 'html', 'htm', 'svg', 'msi', 'dll', 'jar'];
+
+        $stored = [];
+
+        foreach ($files as $file) {
+            if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                continue;
+            }
+
+            $extension = strtolower($file->getClientOriginalExtension());
+            if (in_array($extension, $blockedExtensions, true)) {
+                continue;
+            }
+
+            $generated = (string) Str::uuid().($extension ? '.'.$extension : '');
+            $path = $file->storeAs('attachments/'.$ticket->id, $generated);
+
+            if ($path === false) {
+                continue;
+            }
+
+            $stored[] = TicketAttachment::create([
+                'ticket_id' => $ticket->id,
+                'reply_id' => $reply?->id,
+                'user_id' => $userId,
+                'filename' => $generated,
+                'original_name' => substr(basename($file->getClientOriginalName()), 0, 255),
+                'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
+                'size' => $file->getSize() ?? 0,
+                'path' => $path,
+                'is_internal' => $isInternal,
+            ]);
+        }
+
+        if ($stored !== []) {
+            ActivityLogService::log(
+                'ticket_attachment_upload',
+                $ticket,
+                $ticket->subject,
+                ['count' => count($stored), 'reply_id' => $reply?->id]
+            );
+        }
+
+        return $stored;
     }
 
     private function notifyOnCreate(Ticket $ticket): void
@@ -161,7 +245,7 @@ class TicketService
                     $agent,
                     'ticket.reply',
                     "Customer reply on {$ticket->uid}",
-                    \Illuminate\Support\Str::limit($reply->body, 100),
+                    Str::limit($reply->body, 100),
                     route('admin.tickets.show', $ticket),
                     ['ticket_id' => $ticket->id, 'reply_id' => $reply->id]
                 );
@@ -173,7 +257,7 @@ class TicketService
                 $customer,
                 'ticket.reply',
                 "New reply on {$ticket->uid}",
-                \Illuminate\Support\Str::limit($reply->body, 100),
+                Str::limit($reply->body, 100),
                 route('user.tickets.show', $ticket),
                 ['ticket_id' => $ticket->id, 'reply_id' => $reply->id]
             );
@@ -194,9 +278,9 @@ class TicketService
                 [
                     'role' => 'system',
                     'content' => "You are a helpdesk ticket triage assistant. Output ONLY a compact JSON object, no prose, no markdown.\n"
-                        . 'Schema: {"department":"<exact name from list or null>","category":"<exact name from list or null>","priority":"low|medium|high|urgent","summary":"<one-sentence summary>"}' . "\n"
-                        . 'Departments: ' . json_encode($departments) . "\n"
-                        . 'Categories: ' . json_encode($categories),
+                        .'Schema: {"department":"<exact name from list or null>","category":"<exact name from list or null>","priority":"low|medium|high|urgent","summary":"<one-sentence summary>"}'."\n"
+                        .'Departments: '.json_encode($departments)."\n"
+                        .'Categories: '.json_encode($categories),
                 ],
                 [
                     'role' => 'user',
@@ -331,7 +415,7 @@ class TicketService
         return json_decode($content, true);
     }
 
-    public function calculateSlaDueAt(?int $departmentId = null, string $priority = 'medium'): ?\Carbon\Carbon
+    public function calculateSlaDueAt(?int $departmentId = null, string $priority = 'medium'): ?Carbon
     {
         if (! $departmentId) {
             return null;

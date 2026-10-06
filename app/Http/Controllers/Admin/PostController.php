@@ -41,7 +41,7 @@ class PostController extends Controller
         $post = Post::create($data);
 
         if ($post->status === 'published') {
-            app(IndexNowService::class)->submit(url('/blog/' . $post->slug), true);
+            app(IndexNowService::class)->submit(url('/blog/'.$post->slug), true);
         }
 
         return redirect()->route('admin.posts.index')->with('success', 'Post created.');
@@ -69,7 +69,7 @@ class PostController extends Controller
         $post->update($data);
 
         if ($post->status === 'published') {
-            app(IndexNowService::class)->submit(url('/blog/' . $post->slug), true);
+            app(IndexNowService::class)->submit(url('/blog/'.$post->slug), true);
         }
 
         return redirect()->back()->with('success', 'Post updated.');
@@ -78,6 +78,7 @@ class PostController extends Controller
     public function destroy(Post $post): RedirectResponse
     {
         $post->delete();
+
         return redirect()->route('admin.posts.index')->with('success', 'Post deleted.');
     }
 }

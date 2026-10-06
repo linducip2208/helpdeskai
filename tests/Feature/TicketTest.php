@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 class TicketTest extends TestCase
 {
-    use RefreshDatabase, BypassesPairing;
+    use BypassesPairing, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -73,9 +73,9 @@ class TicketTest extends TestCase
             'source' => 'web',
         ]);
 
-        $this->actingAs($owner)->get('/tickets/' . $ticket->id)->assertOk();
+        $this->actingAs($owner)->get('/tickets/'.$ticket->id)->assertOk();
 
-        $this->actingAs($other)->get('/tickets/' . $ticket->id)->assertForbidden();
+        $this->actingAs($other)->get('/tickets/'.$ticket->id)->assertForbidden();
     }
 
     public function test_guest_cannot_access_tickets(): void

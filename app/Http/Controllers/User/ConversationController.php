@@ -13,7 +13,7 @@ class ConversationController extends Controller
 {
     public function index(): View
     {
-        $conversations = Conversation::with(['user', 'messages' => fn($q) => $q->latest()->limit(1)])
+        $conversations = Conversation::with(['user', 'messages' => fn ($q) => $q->latest()->limit(1)])
             ->where('user_id', auth()->id())
             ->latest('last_message_at')
             ->get();
@@ -23,6 +23,8 @@ class ConversationController extends Controller
 
     public function show(Conversation $conversation): View
     {
+        abort_unless($conversation->user_id === auth()->id(), 403);
+
         $messages = $conversation->messages()
             ->with('user')
             ->orderBy('created_at')
@@ -46,7 +48,9 @@ class ConversationController extends Controller
 
     public function message(Request $request, Conversation $conversation): RedirectResponse
     {
-        $request->validate(['body' => 'required|string']);
+        abort_unless($conversation->user_id === auth()->id(), 403);
+
+        $request->validate(['body' => 'required|string|max:10000']);
 
         ConversationMessage::create([
             'conversation_id' => $conversation->id,

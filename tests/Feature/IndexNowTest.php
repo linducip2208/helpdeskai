@@ -13,7 +13,7 @@ class IndexNowTest extends TestCase
         config(['services.indexnow.key' => 'testkey123']);
         Http::fake(['api.indexnow.org/*' => Http::response('', 200)]);
 
-        $service = new IndexNowService();
+        $service = new IndexNowService;
 
         $first = $service->submit('https://example.com/blog/a');
         $this->assertSame(1, $first);
@@ -30,7 +30,7 @@ class IndexNowTest extends TestCase
         config(['services.indexnow.key' => null]);
         Http::fake();
 
-        $service = new IndexNowService();
+        $service = new IndexNowService;
 
         $this->assertSame(0, $service->submit('https://example.com/x'));
         Http::assertNothingSent();

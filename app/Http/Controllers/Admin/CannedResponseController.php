@@ -16,11 +16,11 @@ class CannedResponseController extends Controller
     public function index(Request $request): View
     {
         $responses = CannedResponse::with('category')
-            ->when($request->search, fn($q) => $q->where(function ($q) use ($request) {
+            ->when($request->search, fn ($q) => $q->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->search}%")
-                  ->orWhere('body', 'like', "%{$request->search}%");
+                    ->orWhere('body', 'like', "%{$request->search}%");
             }))
-            ->when($request->category_id, fn($q) => $q->where('category_id', $request->category_id))
+            ->when($request->category_id, fn ($q) => $q->where('category_id', $request->category_id))
             ->latest()
             ->paginate(25);
 
@@ -51,7 +51,7 @@ class CannedResponseController extends Controller
 
         $response = CannedResponse::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'canned_create', CannedResponse::class, $response->id, $response->title);
+        ActivityLogService::logCustom(auth()->id(), 'canned_create', CannedResponse::class, $response->id, $response->title);
 
         return redirect()->route('admin.canned-responses.index')->with('success', 'Canned response created.');
     }
@@ -77,7 +77,7 @@ class CannedResponseController extends Controller
 
         $cannedResponse->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'canned_update', CannedResponse::class, $cannedResponse->id, $cannedResponse->title);
+        ActivityLogService::logCustom(auth()->id(), 'canned_update', CannedResponse::class, $cannedResponse->id, $cannedResponse->title);
 
         return redirect()->route('admin.canned-responses.index')->with('success', 'Canned response updated.');
     }
@@ -86,7 +86,7 @@ class CannedResponseController extends Controller
     {
         $cannedResponse->delete();
 
-        ActivityLogService::log(auth()->id(), 'canned_delete', CannedResponse::class, $cannedResponse->id, $cannedResponse->title);
+        ActivityLogService::logCustom(auth()->id(), 'canned_delete', CannedResponse::class, $cannedResponse->id, $cannedResponse->title);
 
         return redirect()->route('admin.canned-responses.index')->with('success', 'Canned response deleted.');
     }

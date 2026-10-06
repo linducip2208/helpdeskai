@@ -5,8 +5,11 @@ namespace App\Services;
 class TotpService
 {
     private const PERIOD = 30;
+
     private const DIGITS = 6;
+
     private const ALGO = 'sha1';
+
     private const B32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
     public function generateSecret(int $bytes = 20): string
@@ -39,7 +42,7 @@ class TotpService
 
     public function otpAuthUrl(string $secret, string $account, string $issuer): string
     {
-        $label = rawurlencode($issuer) . ':' . rawurlencode($account);
+        $label = rawurlencode($issuer).':'.rawurlencode($account);
 
         $params = http_build_query([
             'secret' => $secret,
@@ -54,7 +57,7 @@ class TotpService
 
     public function qrUrl(string $otpauth, int $size = 220): string
     {
-        return 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+        return 'https://api.qrserver.com/v1/create-qr-code/?'.http_build_query([
             'size' => "{$size}x{$size}",
             'data' => $otpauth,
         ]);
@@ -71,13 +74,13 @@ class TotpService
     {
         $part = fn () => strtolower(bin2hex(random_bytes(5)));
 
-        return $part() . '-' . $part();
+        return $part().'-'.$part();
     }
 
     private function codeAt(string $secret, int $counter): string
     {
         $key = $this->base32Decode($secret);
-        $binCounter = pack('N*', 0) . pack('N*', $counter);
+        $binCounter = pack('N*', 0).pack('N*', $counter);
 
         $hash = hash_hmac(self::ALGO, $binCounter, $key, true);
         $offset = ord($hash[strlen($hash) - 1]) & 0x0F;

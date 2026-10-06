@@ -5,13 +5,13 @@
 ### Foundation
 
 #### Project Setup
-- Laravel 13 scaffold with Breeze authentication (Vue + Inertia stack)
-- Vite 8 build tooling with Vue 3 + TailwindCSS
+- Laravel 13 scaffold with Breeze authentication (Blade stack)
+- Vite 8 build tooling with Tabler CSS + Alpine.js + ApexCharts (all via npm, local bundle, no CDN)
 - SQLite default for development, MySQL 8.0+ for production
 - Spatie Laravel Permission v7.4 for RBAC
 - Laravel Reverb for real-time WebSocket
 - Laravel Sanctum for API token authentication
-- tightenco/ziggy for route sharing to JS
+- `@tabler/core` via npm for CSS/JS (local Vite bundle, no CDN), `alpinejs` for interactivity, `apexcharts` for dashboard charts
 - barryvdh/laravel-dompdf for PDF generation
 
 #### Database Schema (30 tables)
@@ -192,7 +192,7 @@
 - Encrypted API keys at rest (AES-256)
 - Rate limiting (60 req/min for API)
 - Parameterized queries (Eloquent ORM)
-- Content escaping (Blade + Vue)
+- Content escaping (Blade auto-escaping)
 - Database session driver
 - Role-based access control via Spatie
 - Audit logging for all admin actions

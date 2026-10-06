@@ -465,7 +465,7 @@ Progressive Web App support for mobile-friendly access.
 - Offline fallback page
 - "Add to Home Screen" prompt
 - Push notification support (planned)
-- Responsive TailwindCSS design (mobile-first)
+- Responsive Tabler CSS design (mobile-first, local Vite bundle from npm, no CDN)
 
 ### PWA Manifest
 Located at `public/manifest.json` (to be created).

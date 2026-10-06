@@ -7,7 +7,7 @@
 │                          CLIENT LAYER                               │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
 │  │ Browser  │  │  Mobile  │  │  PWA     │  │  API     │          │
-│  │ (Vue 3)  │  │  (Web)   │  │  (SW)    │  │  Client  │          │
+│  │ (Blade)  │  │  (Web)   │  │  (SW)    │  │  Client  │          │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘          │
 │       │              │              │              │                │
 └───────┼──────────────┼──────────────┼──────────────┼────────────────┘
@@ -21,7 +21,7 @@
 │  │                         │                                    │  │
 │  │  ┌─────────────────────────────────────────────────────┐    │  │
 │  │  │              MIDDLEWARE LAYER                        │    │  │
-│  │  │  HandleInertia | Auth | Role | RateLimit | CSRF     │    │  │
+│  │  │  Auth | Role | ApiKeyAuth | RateLimit | CSRF     │    │  │
 │  │  └─────────────────────────────────────────────────────┘    │  │
 │  │                         │                                    │  │
 │  │  ┌─────────────────────────────────────────────────────┐    │  │
@@ -68,10 +68,10 @@ sequenceDiagram
     participant Model
     participant Database
 
-    Browser->>Nginx: GET /dashboard (Inertia request)
+    Browser->>Nginx: GET /dashboard (Blade view request)
     Nginx->>Laravel: public/index.php
-    Laravel->>Middleware: HandleInertiaRequests
-    Middleware->>Middleware: Auth check (Sanctum session)
+    Laravel->>Middleware: Auth + Role checks
+    Middleware->>Middleware: Auth check (session)
     Middleware->>Middleware: Role check (Spatie)
     Middleware-->>Laravel: Proceed
     Laravel->>Controller: DashboardController@index
@@ -79,9 +79,9 @@ sequenceDiagram
     Model->>Database: SELECT COUNT(*) ...
     Database-->>Model: Result set
     Model-->>Controller: count
-    Controller-->>Laravel: Inertia::render('Dashboard')
-    Laravel-->>Nginx: JSON response
-    Nginx-->>Browser: { component: 'Dashboard', props: {...} }
+    Controller-->>Laravel: view('dashboard', [...])
+    Laravel-->>Nginx: HTML response
+    Nginx-->>Browser: HTML (Blade + Alpine + Tabler)
 ```
 
 ### Mermaid Sequence: Real-Time Chat (WebSocket)
@@ -113,9 +113,9 @@ sequenceDiagram
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Backend Framework | Laravel 13 | Mature ecosystem, excellent DX, built-in queue/cache/broadcasting |
-| Auth Scaffold | Breeze + Vue/Inertia | Lightweight, SPA-like UX without separate API, SSR-ready |
-| Frontend | Vue 3 + Inertia.js | Component-based UI with server-side routing, no need for client-side router |
-| CSS | TailwindCSS 3 | Utility-first, fast prototyping, consistent design system |
+| Auth Scaffold | Breeze (Blade) | Classic server-rendered auth views, no SPA overhead |
+| Frontend | Blade views + Alpine.js | Server-rendered templates with Alpine for inline interactivity |
+| CSS | Tabler CSS via npm `@tabler/core` (local Vite bundle, no CDN) | Admin-grade component library, bundled locally for offline reliability |
 | Roles/Permissions | Spatie Laravel Permission | Battle-tested, RBAC + direct permissions, cache-efficient |
 | API Auth | Laravel Sanctum | Simple token auth, SPA auth support, no OAuth complexity |
 | WebSocket Server | Laravel Reverb | First-party, scales via Redis pub/sub, built for Laravel ecosystem |
@@ -158,7 +158,8 @@ app/                                     # Application code
 │   │   ├── Controller.php               # Base controller
 │   │   └── ProfileController.php
 │   ├── Middleware/
-│   │   └── HandleInertiaRequests.php
+│   │   ├── CheckRole.php
+│   │   └── ApiKeyAuth.php
 │   └── Requests/
 │       └── Auth/                        # Form requests
 ├── Models/                              # 26 Eloquent models
@@ -194,12 +195,12 @@ database/
     └── CustomerUserSeeder.php
 
 resources/
-├── css/                                 # TailwindCSS entry
-├── js/                                  # Vue 3 + Inertia components
-│   ├── Pages/                           # Page components
-│   ├── Layouts/                         # Layout components
-│   └── app.js                           # Inertia + Vue app setup
-└── views/                               # Blade templates (if any)
+├── css/                                 # Tabler CSS entry (@tabler/core import)
+├── js/                                  # Alpine.js + ApexCharts entry (app.js)
+│   ├── app.js                           # Alpine.start(), Tabler JS, ApexCharts global
+│   ├── bootstrap.js                     # axios defaults
+│   └── push.js                          # push notification helper
+└── views/                               # Blade templates (layouts, admin, user, public)
 
 routes/
 ├── web.php                              # All web routes (113 lines)
@@ -261,60 +262,42 @@ Each trigger event dispatches to `AutomationService` which evaluates rules, appl
    - TrimStrings
    - ConvertEmptyStringsToNull
 4. Route Middleware groups:
-   - web: CSRF, Session, Auth, Verified, HandleInertiaRequests, ShareInertiaData
-   - api: Sanctum (auth:sanctum), Throttle
+    - web: CSRF, Session, Auth, Verified, SetLocale
+    - api: ApiKeyAuth / Sanctum (auth:sanctum), Throttle
 5. Route resolution → Controller dispatch
-6. Controller: validate → service call → model query → Inertia response / JSON
+6. Controller: validate → service call → model query → Blade view / JSON
 7. Response sent back through middleware stack
 8. Terminable middleware runs (if any)
 ```
 
 ---
 
-## Frontend Architecture (Vue 3 + Inertia + Tailwind)
+## Frontend Architecture (Blade + Alpine.js + Tabler)
+
+Server-rendered Blade views styled with Tabler CSS and enhanced with Alpine.js for inline interactivity. No Vue, no Inertia, no Tailwind, no CDN — all assets are bundled locally via Vite from npm packages into `public/build`.
 
 ```
-resources/js/
-├── app.js                    # Inertia app setup, Ziggy routes, Vue plugins
-├── Components/               # Reusable Vue components
-│   ├── AppLayout.vue         # Main authenticated layout
-│   ├── GuestLayout.vue       # Unauthenticated layout
-│   ├── AdminLayout.vue       # Admin panel layout
-│   ├── TicketCard.vue        # Ticket list item
-│   ├── ChatWidget.vue        # Reverb-powered chat
-│   ├── NotificationBell.vue  # Real-time notifications
-│   └── Pagination.vue        # Paginated list component
-├── Pages/                    # Page-level components (mapped to routes)
-│   ├── Dashboard.vue
-│   ├── Tickets/
-│   │   ├── Index.vue
-│   │   ├── Show.vue
-│   │   └── Create.vue
-│   ├── Knowledge/
-│   │   ├── Index.vue
-│   │   └── Show.vue
-│   ├── Conversations/
-│   │   ├── Index.vue
-│   │   └── Show.vue
-│   ├── Admin/
-│   │   ├── Dashboard.vue
-│   │   ├── Tickets/
-│   │   ├── Users/
-│   │   ├── Settings/
-│   │   └── ...
-│   └── Auth/
-│       ├── Login.vue
-│       ├── Register.vue
-│       └── ForgotPassword.vue
-└── Composables/              # Vue 3 composables
-    ├── useEcho.js            # Laravel Echo (Reverb) composable
-    ├── useAuth.js            # Auth state composable
-    └── useNotifications.js   # Notification composable
+resources/views/
+├── layouts/
+│   ├── app.blade.php           # Main authenticated layout (@vite CSS+JS, Tabler page shell)
+│   ├── admin.blade.php         # Admin panel layout (dark sidebar, nav sections)
+│   ├── guest.blade.php         # Unauthenticated layout (login/register)
+│   └── navigation.blade.php    # Shared nav partial
+├── components/                 # Reusable Blade components (alerts, badges, cards)
+├── admin/                      # Admin CRUD views (tickets, users, knowledge, settings, ...)
+├── tickets/ + user/            # Customer ticket & conversation views
+├── knowledge-base/ + blog/     # Public content views
+└── seo/                        # pSEO views (best-helpdesk, compare, alternatives)
+
+resources/css/app.css           # @import '@tabler/core/dist/css/tabler.min.css' (+ Inter font)
+resources/js/app.js             # Tabler JS + ApexCharts global + Alpine.start()
 ```
 
-### Inertia SSR Support
-
-The project includes Vite SSR build configuration (`vite build --ssr`). This allows server-side rendering of Vue pages for better SEO and initial load performance.
+- **Layouts:** `app` (authenticated), `admin` (admin panel), `guest` (auth pages) — loaded via `@vite(['resources/css/app.css', 'resources/js/app.js'])`.
+- **Components:** Blade `@include` / `<x-*>` components for cards, badges, pagination, alerts.
+- **Interactivity:** Alpine.js `x-data` / `x-show` / `x-cloak` for dropdowns, modals, toggles — no build-step components.
+- **Charts:** ApexCharts imported from npm (`window.ApexCharts`) for dashboard graphs; data served as JSON from admin analytics endpoints.
+- **Build:** `npm run build` → Vite compiles `resources/css/app.css` + `resources/js/app.js` to `public/build` (manifest + versioned assets). Tabler and fonts resolve from `node_modules`, never from CDN.
 
 ---
 
@@ -334,8 +317,8 @@ Event fired in Laravel (e.g., TicketCreated)
     → ShouldBroadcast interface
     → Broadcasts to channel (e.g., 'admin.tickets')
     → Reverb receives & pushes to subscribed clients
-    → Laravel Echo.on() receives in Vue component
-    → Vue reactivity updates UI
+    → Laravel Echo.on() receives in JS (Reverb listener)
+    → Alpine.js state updates the Blade-rendered UI
 ```
 
 ### Channels

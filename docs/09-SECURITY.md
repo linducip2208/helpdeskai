@@ -84,8 +84,8 @@ if (!auth()->user()->can('edit tickets')) {
     abort(403);
 }
 
-// In Blade/Vue
-@can('edit tickets')
+// In Blade
+@can('tickets.update')
     <button>Edit</button>
 @endcan
 
@@ -99,7 +99,7 @@ Route::delete('/tickets/{ticket}')->middleware('permission:delete tickets');
 
 ### Web
 - All POST/PUT/PATCH/DELETE requests require CSRF token
-- Token embedded in meta tag + automatically included by Inertia
+- Token embedded in meta tag + sent via `X-CSRF-TOKEN` header on fetch/Alpine requests
 - `VerifyCsrfToken` middleware active on all web routes
 
 ### API
@@ -124,17 +124,17 @@ Route::delete('/tickets/{ticket}')->middleware('permission:delete tickets');
 
 ### Output Escaping
 - **Blade:** `{{ $variable }}` auto-escapes HTML
-- **Vue:** `{{ variable }}` auto-escapes HTML
-- **Raw output:** `{!! $variable !!}` avoided; sanitized when necessary
+- **Raw output:** `{!! $variable !!}` avoided; inbound email HTML is never rendered raw
+- All dates rendered through the `wib()` helper (Asia/Jakarta, locale-aware)
 
 ### Content Security Policy (CSP)
 ```http
 Content-Security-Policy:
   default-src 'self';
-  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  img-src 'self' data: https:;
-  font-src 'self' https://fonts.gstatic.com;
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  font-src 'self' data:;
   connect-src 'self' wss://* ws://*;
   frame-ancestors 'none';
   form-action 'self';

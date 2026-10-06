@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
-use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -27,10 +27,10 @@ class AnalyticsController extends Controller
         ]);
     }
 
-    public function chartData(Request $request): \Illuminate\Http\JsonResponse
+    public function chartData(Request $request): JsonResponse
     {
         $days = $request->get('days', 30);
-        
+
         $tickets = Ticket::selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->where('created_at', '>=', now()->subDays($days))
             ->groupBy('date')

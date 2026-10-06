@@ -1,58 +1,138 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# HelpDesk AI
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Self-hosted, AI-assisted helpdesk & customer support platform built with **Laravel 13**, **MySQL/SQLite**, **Tabler UI** (bundled locally, zero CDN), and a provider-agnostic **AI support copilot**.
 
-## About Laravel
+Tickets, live conversations, knowledge base, SLA engine, automation rules, email piping, notifications (database + web push), granular RBAC, 2FA/TOTP, audit logs, REST API (Sanctum + scoped API keys), bilingual UI (**ID/EN**), and display timezone **Asia/Jakarta**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Area | Highlights |
+|---|---|
+| Ticketing | Unique ticket numbers, state machine (`open → in_progress → waiting → answered → resolved → closed`), reopen, assign/reassign, department transfer, internal notes (staff-only), public/customer replies, bulk actions, attachments (private storage, auth-checked downloads) |
+| Customer portal | Own tickets only (IDOR-tested), replies, attachments, CSAT, knowledge base search |
+| Agent workflow | Assigned/team queues, claim, canned responses, AI suggestions, customer history, workload dashboard |
+| SLA engine | First-response & resolution targets per priority/department, breach detection, warnings, scheduler-driven checks |
+| Automation | `IF conditions THEN actions` rule engine (assign, set priority/status/category/department, internal notes, notifications) with recursion guard and execution audit |
+| Email | Inbound email → ticket/reply with threading (`[TKT-XXXXX]`), spoof protection, sender validation, logging; HTML bodies never rendered raw |
+| Notifications | Event-driven database notifications + queued web push (VAPID) |
+| Knowledge base | Categories, articles, FAQs, search, slugs, SEO metadata, public sitemap |
+| AI copilot | Classification, priority prediction, sentiment, suggested replies, summaries — graceful degradation when providers are down (ticketing never depends on AI) |
+| AI providers | OpenAI-compatible, Anthropic, Gemini; encrypted keys, connection test, model listing, usage & cost tracking, per-endpoint throttling |
+| API | Sanctum tokens **or** scoped API keys (`read`/`read-write`/`full`), consistent `{success, data, message}` envelope, rate limited |
+| Security | RBAC (Spatie), 2FA/TOTP + recovery codes, impersonation with audit + stop flow, activity/audit logs, throttled auth & AI endpoints, sanitized AI errors |
+| UI | Tabler bundled via Vite (no CDN, works offline), responsive, EN/ID switcher, Asia/Jakarta timestamps (`06 Oktober 2026 19:00 WIB`) |
+| Ops | Database queue + scheduler (SLA checks, reminders, backups, IndexNow), system artisan commands, production error pages |
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Requirements
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.3+ (extensions: `bcmath ctype curl dom fileinfo json mbstring openssl pcre pdo_mysql/pdo_sqlite tokenizer xml`, plus `intl`)
+- Composer 2
+- Node.js 18+ & npm
+- MySQL 8.0+ (production) or SQLite (local/dev)
+- A queue worker + scheduler entry for background jobs (see Deployment)
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Installation
 
 ```bash
-composer require laravel/boost --dev
+composer install
+cp .env.example .env
+php artisan key:generate
 
-php artisan boost:install
+# Database (SQLite for quick start; MySQL for production)
+touch database/database.sqlite
+php artisan migrate --force
+
+# Roles, permissions, demo data
+php artisan db:seed --force
+
+# Frontend (Tabler + Inter + ApexCharts, all local via npm)
+npm install
+npm run build
+
+php artisan storage:link
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Key `.env` settings:
 
-## Contributing
+```
+APP_NAME="HelpDesk AI"
+APP_TIMEZONE=Asia/Jakarta
+APP_LOCALE=id            # id | en (user-switchable, stored in session)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+DB_CONNECTION=mysql      # or sqlite
+DB_HOST=127.0.0.1
+DB_DATABASE=helpdeskai
 
-## Code of Conduct
+QUEUE_CONNECTION=database
+MAIL_MAILER=smtp         # log | smtp ...
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+AI providers and keys are configured in **Admin → AI Providers** (keys encrypted at rest, never displayed back).
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Running locally
+
+```bash
+composer dev   # serve + queue:listen + pail + vite (concurrently)
+```
+
+Default seeded accounts (see `database/seeders/*`): admin, manager, agents, customers — change passwords immediately.
+
+---
+
+## Scheduler & queue (production)
+
+```bash
+* * * * * cd /var/www/helpdeskai && php artisan schedule:run >> /dev/null 2>&1
+php artisan queue:work --tries=3 --backoff=30
+```
+
+Scheduled: `sla:check` (hourly), `tickets:reminders` (08:00), `db:backup` (02:00), `seo:indexnow` (02:45). Queued: web-push delivery, notifications.
+
+---
+
+## Testing
+
+```bash
+php artisan test            # 72 tests: auth, IDOR/ownership, attachments, automation, AI fallback, email piping, API keys
+vendor/bin/pint --test      # code style (Laravel preset)
+npm run build               # frontend bundle must succeed
+```
+
+Security coverage includes negative tests: customer A ↔ ticket/attachment/conversation of customer B, internal-note leakage (web + API), revoked/expired/scoped API keys, email-reply spoofing, nested impersonation, AI-outage fallback.
+
+---
+
+## Deployment
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** (Ubuntu/Nginx + PHP-FPM, Supervisor, permissions, `storage:link`, Vite build) and **[docs/](docs/)** for PRD, architecture, ERD, API, AI providers, and changelog.
+
+Production checklist:
+
+```bash
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+No build or runtime asset is loaded from a CDN — the UI works fully offline from `public/build`.
+
+---
+
+## Security
+
+- Report vulnerabilities privately to the repository owner. Never expose `.env`, `storage/*.key`, or AI provider keys.
+- API keys are stored as SHA-256 hashes and shown once at creation; scopes enforced per HTTP method.
+- Attachments live in private storage with generated filenames, MIME + extension allowlists, and per-download authorization.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Proprietary — activation via marketplace pairing wizard (`/__pair`). See **Admin → License Status**.

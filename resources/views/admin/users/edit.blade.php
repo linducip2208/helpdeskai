@@ -1,57 +1,55 @@
 @extends('layouts.admin')
 @section('title', 'Edit User')
 @section('content')
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="mb-3">
+            <a href="{{ route('admin.users.index') }}">&larr; Back to Users</a>
+            <h2 class="page-title mt-1">Edit User</h2>
+        </div>
 
-<div class="max-w-2xl mx-auto space-y-6">
-    <div>
-        <a href="{{ route('admin.users.index') }}" class="text-sm text-indigo-600 hover:text-indigo-700">&larr; Back to Users</a>
-        <h2 class="text-2xl font-bold text-slate-900 mt-1">Edit User</h2>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <form action="{{ route('admin.users.update', $user) }}" method="POST">
-            @csrf @method('PUT')
-            <div class="space-y-5">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                    <input type="text" name="name" id="name" value="{{ old('name', $user->name) }}" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
-                    @error('name')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
-                    @error('email')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-slate-700 mb-1">New Password <span class="text-slate-400">(leave blank to keep current)</span></label>
-                    <input type="password" name="password" id="password" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    @error('password')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-2">Roles</label>
-                    <div class="space-y-2">
+        <div class="card">
+            <div class="card-body">
+                <form action="{{ route('admin.users.update', $user) }}" method="POST">
+                    @csrf @method('PUT')
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" name="name" id="name" value="{{ old('name', $user->name) }}" class="form-control" required>
+                        @error('name')<p class="text-danger small mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" name="email" id="email" value="{{ old('email', $user->email) }}" class="form-control" required>
+                        @error('email')<p class="text-danger small mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">New Password (leave blank to keep current)</label>
+                        <input type="password" name="password" id="password" class="form-control">
+                        @error('password')<p class="text-danger small mt-1">{{ $message }}</p>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Roles</label>
                         @php $userRoleIds = $user->roles->pluck('id')->all(); @endphp
                         @foreach($roles as $role)
-                            <label class="inline-flex items-center text-sm text-slate-700 mr-4">
-                                <input type="checkbox" name="roles[]" value="{{ $role->id }}" {{ in_array($role->id, $userRoleIds) ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2">
-                                {{ ucfirst($role->name) }}
+                            <label class="form-check">
+                                <input type="checkbox" name="roles[]" value="{{ $role->id }}" {{ in_array($role->id, $userRoleIds) ? 'checked' : '' }} class="form-check-input">
+                                <span class="form-check-label">{{ ucfirst($role->name) }}</span>
                             </label>
                         @endforeach
                     </div>
-                </div>
-                <div class="flex items-center">
-                    <label class="inline-flex items-center text-sm text-slate-700">
-                        <input type="checkbox" name="is_active" value="1" {{ $user->is_active ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2">
-                        Active
-                    </label>
-                </div>
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-                    <a href="{{ route('admin.users.index') }}" class="px-6 py-2.5 border border-gray-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-gray-50">Cancel</a>
-                    <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Update User</button>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-check">
+                            <input type="checkbox" name="is_active" value="1" {{ $user->is_active ? 'checked' : '' }} class="form-check-input">
+                            <span class="form-check-label">Active</span>
+                        </label>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end">
+                        <a href="{{ route('admin.users.index') }}" class="btn me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update User</button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
-
 @endsection

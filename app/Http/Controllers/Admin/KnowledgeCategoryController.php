@@ -43,7 +43,7 @@ class KnowledgeCategoryController extends Controller
 
         $category = KnowledgeCategory::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'kb_category_create', KnowledgeCategory::class, $category->id, $category->name);
+        ActivityLogService::logCustom(auth()->id(), 'kb_category_create', KnowledgeCategory::class, $category->id, $category->name);
 
         return redirect()->route('admin.knowledge-categories.index')->with('success', 'Category created.');
     }
@@ -59,7 +59,7 @@ class KnowledgeCategoryController extends Controller
     public function update(Request $request, KnowledgeCategory $knowledgeCategory): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:knowledge_categories,name,' . $knowledgeCategory->id,
+            'name' => 'required|string|max:255|unique:knowledge_categories,name,'.$knowledgeCategory->id,
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:knowledge_categories,id',
             'is_active' => 'boolean',
@@ -70,7 +70,7 @@ class KnowledgeCategoryController extends Controller
 
         $knowledgeCategory->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'kb_category_update', KnowledgeCategory::class, $knowledgeCategory->id, $knowledgeCategory->name);
+        ActivityLogService::logCustom(auth()->id(), 'kb_category_update', KnowledgeCategory::class, $knowledgeCategory->id, $knowledgeCategory->name);
 
         return redirect()->route('admin.knowledge-categories.index')->with('success', 'Category updated.');
     }
@@ -79,7 +79,7 @@ class KnowledgeCategoryController extends Controller
     {
         $knowledgeCategory->delete();
 
-        ActivityLogService::log(auth()->id(), 'kb_category_delete', KnowledgeCategory::class, $knowledgeCategory->id, $knowledgeCategory->name);
+        ActivityLogService::logCustom(auth()->id(), 'kb_category_delete', KnowledgeCategory::class, $knowledgeCategory->id, $knowledgeCategory->name);
 
         return redirect()->route('admin.knowledge-categories.index')->with('success', 'Category deleted.');
     }

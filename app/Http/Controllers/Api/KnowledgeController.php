@@ -14,9 +14,9 @@ class KnowledgeController extends Controller
     {
         $articles = KnowledgeArticle::with('category')
             ->where('status', 'published')
-            ->when($request->search, fn($q) => $q->where(function ($q) use ($request) {
+            ->when($request->search, fn ($q) => $q->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->search}%")
-                  ->orWhere('content', 'like', "%{$request->search}%");
+                    ->orWhere('content', 'like', "%{$request->search}%");
             }))
             ->latest()
             ->paginate($request->per_page ?? 15);

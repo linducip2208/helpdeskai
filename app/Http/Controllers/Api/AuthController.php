@@ -21,7 +21,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -32,24 +32,30 @@ class AuthController extends Controller
         )->plainTextToken;
 
         return response()->json([
+            'success' => true,
             'data' => [
                 'user' => $user,
                 'token' => $token,
             ],
+            'message' => 'Authenticated.',
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        if (method_exists($request->user(), 'currentAccessToken') && $request->user()->currentAccessToken()) {
+            $request->user()->currentAccessToken()->delete();
+        }
 
-        return response()->json(['message' => 'Logged out successfully.']);
+        return response()->json(['success' => true, 'data' => null, 'message' => 'Logged out successfully.']);
     }
 
     public function me(Request $request): JsonResponse
     {
         return response()->json([
+            'success' => true,
             'data' => $request->user()->load('roles'),
+            'message' => 'Profile retrieved.',
         ]);
     }
 }

@@ -1,72 +1,89 @@
 @extends('layouts.admin')
 @section('title', 'User Detail')
+@section('page-actions')
+    <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-primary">Edit</a>
+    <form action="{{ route('admin.users.impersonate', $user) }}" method="POST" class="d-inline">
+        @csrf
+        <button type="submit" class="btn btn-warning">Impersonate</button>
+    </form>
+@endsection
 @section('content')
+<div class="mb-3">
+    <a href="{{ route('admin.users.index') }}">&larr; Back to Users</a>
+    <h2 class="page-title mt-1">{{ $user->name }}</h2>
+</div>
 
-<div class="max-w-4xl mx-auto space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-            <a href="{{ route('admin.users.index') }}" class="text-sm text-indigo-600 hover:text-indigo-700">&larr; Back to Users</a>
-            <h2 class="text-2xl font-bold text-slate-900 mt-1">{{ $user->name }}</h2>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ route('admin.users.edit', $user) }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Edit</a>
-            <form action="{{ route('admin.users.impersonate', $user) }}" method="POST" class="inline">
-                @csrf
-                <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg">Impersonate</button>
-            </form>
+<div class="row row-cards mb-3">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Profile</h3>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-6 text-muted">Email</dt>
+                    <dd class="col-6">{{ $user->email }}</dd>
+                    <dt class="col-6 text-muted">Email Verified</dt>
+                    <dd class="col-6">{{ $user->email_verified_at ? wib($user->email_verified_at, 'd F Y', false) : '—' }}</dd>
+                    <dt class="col-6 text-muted">Status</dt>
+                    <dd class="col-6"><span class="badge bg-{{ $user->is_active ? 'green' : 'secondary' }}-lt">{{ $user->is_active ? 'Active' : 'Inactive' }}</span></dd>
+                    <dt class="col-6 text-muted">Joined</dt>
+                    <dd class="col-6">{{ wib($user->created_at, 'd F Y', false) }}</dd>
+                </dl>
+            </div>
         </div>
     </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Profile</h3>
-            <dl class="grid grid-cols-2 gap-4 text-sm">
-                <div><dt class="text-slate-500">Email</dt><dd class="text-slate-900 mt-1">{{ $user->email }}</dd></div>
-                <div><dt class="text-slate-500">Email Verified</dt><dd class="text-slate-900 mt-1">{{ $user->email_verified_at ? $user->email_verified_at->format('M d, Y') : '—' }}</dd></div>
-                <div><dt class="text-slate-500">Status</dt><dd class="mt-1"><span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium {{ $user->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700' }}">{{ $user->is_active ? 'Active' : 'Inactive' }}</span></dd></div>
-                <div><dt class="text-slate-500">Joined</dt><dd class="text-slate-900 mt-1">{{ $user->created_at->format('M d, Y') }}</dd></div>
-            </dl>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-3">Roles</h3>
-            <div class="space-y-2">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Roles</h3>
+            </div>
+            <div class="card-body">
                 @forelse($user->roles as $role)
-                    <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">{{ ucfirst($role->name) }}</span>
+                    <span class="badge bg-primary-lt">{{ ucfirst($role->name) }}</span>
                 @empty
-                    <p class="text-sm text-slate-400">No roles assigned</p>
+                    <div class="empty">
+                        <p class="empty-title">No roles assigned</p>
+                        <p class="empty-subtitle text-muted">Assign a role from the edit page.</p>
+                    </div>
                 @endforelse
             </div>
         </div>
     </div>
+</div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100">
-            <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Recent Tickets</h3>
-        </div>
-        <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead class="bg-gray-50 border-b border-gray-100">
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Recent Tickets</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+            <thead>
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Subject</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Created</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
+            <tbody>
                 @forelse($user->tickets as $ticket)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-3 text-sm"><a href="{{ route('admin.tickets.show', $ticket) }}" class="text-indigo-600 hover:text-indigo-700">{{ $ticket->subject }}</a></td>
-                        <td class="px-6 py-3 text-sm text-slate-500">{{ ucfirst($ticket->status->value ?? $ticket->status) }}</td>
-                        <td class="px-6 py-3 text-sm text-slate-500">{{ $ticket->created_at->format('M d, Y') }}</td>
+                    <tr>
+                        <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->subject }}</a></td>
+                        <td class="text-muted">{{ ucfirst($ticket->status->value ?? $ticket->status) }}</td>
+                        <td class="text-muted">{{ wib($ticket->created_at, 'd F Y', false) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" class="px-6 py-8 text-center text-sm text-slate-400">No tickets</td></tr>
+                    <tr>
+                        <td colspan="3">
+                            <div class="empty">
+                                <p class="empty-title">No tickets</p>
+                                <p class="empty-subtitle text-muted">This user has no tickets yet.</p>
+                            </div>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
-        </div>
     </div>
 </div>
-
 @endsection

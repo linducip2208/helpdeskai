@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Department;
 use App\Models\EmailLog;
 use App\Models\Ticket;
 use App\Models\User;
@@ -53,38 +54,56 @@ class EmailPipingService
 
     private function parseAndDispatch(array $rawEmail, EmailLog $log): ?Ticket
     {
-        $fromEmail = $rawEmail['from'] ?? null;
-        $subject = $rawEmail['subject'] ?? 'No Subject';
+        $fromEmail = strtolower(trim($rawEmail['from'] ?? ''));
+        $subject = trim($rawEmail['subject'] ?? '') ?: 'No Subject';
         $body = $rawEmail['body'] ?? $rawEmail['text'] ?? '';
 
-        if (! $fromEmail) {
-            throw new \InvalidArgumentException('Missing "from" email address');
+        if (! $fromEmail || ! filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+            throw new \InvalidArgumentException('Missing or invalid "from" email address');
         }
 
-        $user = User::where('email', $fromEmail)->first()
-            ?? User::create([
-                'name' => $rawEmail['from_name'] ?? explode('@', $fromEmail)[0],
+        $user = User::where('email', $fromEmail)->first();
+
+        if (! $user) {
+            $user = User::create([
+                'name' => substr($rawEmail['from_name'] ?? explode('@', $fromEmail)[0], 0, 255),
                 'email' => $fromEmail,
                 'password' => bcrypt(Str::random(32)),
             ]);
+            $user->assignRole('customer');
+        }
 
         if (preg_match('/\[(TKT-[A-Z0-9]+)\]/', $subject, $matches)) {
             $ticket = Ticket::where('uid', $matches[1])->first();
 
             if ($ticket) {
-                $reply = $this->ticketService->addReply($ticket, $user->id, $body, false);
-                $log->reply_id = $reply->id;
+                $isParticipant = $user->id === $ticket->user_id
+                    || ($ticket->assigned_to && $user->id === $ticket->assigned_to)
+                    || $user->hasRole(['admin', 'manager', 'agent']);
 
-                return $ticket;
+                if (! $isParticipant) {
+                    $log->reply_id = null;
+                } else {
+                    $reply = $this->ticketService->addReply($ticket, $user->id, $body, false);
+                    $log->reply_id = $reply->id;
+
+                    return $ticket;
+                }
             }
         }
 
         return $this->ticketService->createTicket([
             'user_id' => $user->id,
-            'subject' => $subject,
+            'subject' => substr($subject, 0, 255),
             'body' => $body,
-            'department_id' => null,
+            'department_id' => $this->defaultDepartmentId(),
             'priority' => 'medium',
+            'source' => 'email',
         ]);
+    }
+
+    private function defaultDepartmentId(): ?int
+    {
+        return Department::where('is_active', true)->orderBy('id')->value('id');
     }
 }

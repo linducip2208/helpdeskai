@@ -28,7 +28,7 @@ class ExportController extends Controller
             $query->whereDate('created_at', '<=', $to);
         }
 
-        $filename = 'tickets-' . now()->format('Ymd-His') . '.csv';
+        $filename = 'tickets-'.now()->format('Ymd-His').'.csv';
 
         return $this->stream($filename, function ($out) use ($query) {
             fputcsv($out, [
@@ -63,7 +63,7 @@ class ExportController extends Controller
 
     public function agents(): StreamedResponse
     {
-        $filename = 'agents-' . now()->format('Ymd-His') . '.csv';
+        $filename = 'agents-'.now()->format('Ymd-His').'.csv';
 
         return $this->stream($filename, function ($out) {
             fputcsv($out, [
@@ -107,7 +107,7 @@ class ExportController extends Controller
             fclose($out);
         }, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'no-store, no-cache',
         ]);
     }

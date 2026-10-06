@@ -4,20 +4,22 @@ namespace Database\Seeders;
 
 use App\Models\KnowledgeArticle;
 use App\Models\KnowledgeCategory;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class KnowledgeBaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = \App\Models\User::first();
+        $user = User::first();
 
         $categoryNames = ['Getting Started', 'Tickets', 'Admin', 'AI & Automation', 'Chat'];
         $categories = [];
         foreach ($categoryNames as $name) {
             $categories[$name] = KnowledgeCategory::firstOrCreate(
                 ['name' => $name],
-                ['slug' => \Illuminate\Support\Str::slug($name)]
+                ['slug' => Str::slug($name)]
             );
         }
 

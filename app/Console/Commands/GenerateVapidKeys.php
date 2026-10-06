@@ -18,9 +18,9 @@ class GenerateVapidKeys extends Command
         $this->info('VAPID keys generated. Add to your .env:');
         $this->line('');
         $this->line('VAPID_SUBJECT=mailto:admin@yourdomain.com');
-        $this->line('VAPID_PUBLIC_KEY=' . $keys['public']);
+        $this->line('VAPID_PUBLIC_KEY='.$keys['public']);
         $this->line('');
-        $this->line('VAPID_PRIVATE_KEY="' . str_replace("\n", '\n', trim($keys['private_pem'])) . '"');
+        $this->line('VAPID_PRIVATE_KEY="'.str_replace("\n", '\n', trim($keys['private_pem'])).'"');
         $this->line('');
         $this->warn('Store the private key securely. Do not commit it to git.');
 

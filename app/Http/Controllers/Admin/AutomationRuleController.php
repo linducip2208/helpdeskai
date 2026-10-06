@@ -37,7 +37,7 @@ class AutomationRuleController extends Controller
 
         $rule = AutomationRule::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'automation_create', AutomationRule::class, $rule->id, $rule->name);
+        ActivityLogService::logCustom(auth()->id(), 'automation_create', AutomationRule::class, $rule->id, $rule->name);
 
         return redirect()->route('admin.automation-rules.index')->with('success', 'Automation rule created.');
     }
@@ -63,7 +63,7 @@ class AutomationRuleController extends Controller
 
         $automationRule->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'automation_update', AutomationRule::class, $automationRule->id, $automationRule->name);
+        ActivityLogService::logCustom(auth()->id(), 'automation_update', AutomationRule::class, $automationRule->id, $automationRule->name);
 
         return redirect()->route('admin.automation-rules.index')->with('success', 'Automation rule updated.');
     }
@@ -72,7 +72,7 @@ class AutomationRuleController extends Controller
     {
         $automationRule->delete();
 
-        ActivityLogService::log(auth()->id(), 'automation_delete', AutomationRule::class, $automationRule->id, $automationRule->name);
+        ActivityLogService::logCustom(auth()->id(), 'automation_delete', AutomationRule::class, $automationRule->id, $automationRule->name);
 
         return redirect()->route('admin.automation-rules.index')->with('success', 'Automation rule deleted.');
     }

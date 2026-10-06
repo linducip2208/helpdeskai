@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class PublicPagesTest extends TestCase
 {
-    use RefreshDatabase, BypassesPairing;
+    use BypassesPairing, RefreshDatabase;
 
     protected function setUp(): void
     {

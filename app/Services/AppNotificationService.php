@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendWebPushNotification;
 use App\Models\Notification;
 use App\Models\PushSubscription;
 use App\Models\User;
@@ -43,8 +44,9 @@ class AppNotificationService
 
     private function pushIfSubscribed(User $user, string $title, string $body, ?string $url): void
     {
-        $subs = PushSubscription::where('user_id', $user->id)->get();
-        if ($subs->isEmpty()) {
+        $ids = PushSubscription::where('user_id', $user->id)->pluck('id');
+
+        if ($ids->isEmpty()) {
             return;
         }
 
@@ -55,8 +57,8 @@ class AppNotificationService
             'icon' => '/icons/icon-192.svg',
         ];
 
-        foreach ($subs as $sub) {
-            $this->webPush->send($sub, $payload);
+        foreach ($ids as $id) {
+            SendWebPushNotification::dispatch($id, $payload);
         }
     }
 }

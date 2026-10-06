@@ -12,9 +12,9 @@ class OpenAiCompatibleAdapter implements AiAdapterInterface
     public function send(AiProvider $provider, AiProviderModel $model, array $request): array
     {
         try {
-            $response = Http::timeout(120)
+            $response = Http::timeout(60)->retry(1, 500)
                 ->withHeaders($this->buildHeaders($provider))
-                ->post(rtrim($provider->base_url, '/') . '/v1/chat/completions', [
+                ->post(rtrim($provider->base_url, '/').'/v1/chat/completions', [
                     'model' => $request['model'],
                     'messages' => $request['messages'],
                     'max_tokens' => $request['options']['max_tokens'] ?? $model->max_tokens ?? 4096,
@@ -35,10 +35,10 @@ class OpenAiCompatibleAdapter implements AiAdapterInterface
             Log::error('OpenAI-compatible API error', [
                 'provider' => $provider->name,
                 'status' => $response->status(),
-                'body' => $response->body(),
+                'body' => substr($response->body(), 0, 2000),
             ]);
 
-            return ['error' => "API error: {$response->status()} - {$response->body()}"];
+            return ['error' => "Provider request failed (HTTP {$response->status()})."];
         } catch (\Exception $e) {
             Log::error('OpenAI-compatible request failed', [
                 'provider' => $provider->name,
@@ -54,7 +54,7 @@ class OpenAiCompatibleAdapter implements AiAdapterInterface
         try {
             $response = Http::timeout(30)
                 ->withHeaders($this->buildHeaders($provider))
-                ->get(rtrim($provider->base_url, '/') . '/v1/models');
+                ->get(rtrim($provider->base_url, '/').'/v1/models');
 
             if ($response->successful()) {
                 return ['success' => true, 'message' => 'Connection successful.'];
@@ -71,7 +71,7 @@ class OpenAiCompatibleAdapter implements AiAdapterInterface
         try {
             $response = Http::timeout(30)
                 ->withHeaders($this->buildHeaders($provider))
-                ->get(rtrim($provider->base_url, '/') . '/v1/models');
+                ->get(rtrim($provider->base_url, '/').'/v1/models');
 
             if ($response->successful()) {
                 $models = collect($response->json('data', []))
@@ -90,7 +90,7 @@ class OpenAiCompatibleAdapter implements AiAdapterInterface
     private function buildHeaders(AiProvider $provider): array
     {
         $headers = [
-            'Authorization' => 'Bearer ' . $provider->decrypted_api_key,
+            'Authorization' => 'Bearer '.$provider->decrypted_api_key,
             'Content-Type' => 'application/json',
         ];
 

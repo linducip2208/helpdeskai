@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KnowledgeArticle;
 use App\Models\KnowledgeCategory;
 use App\Services\ActivityLogService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -16,11 +17,11 @@ class KnowledgeArticleController extends Controller
     public function index(Request $request): View
     {
         $articles = KnowledgeArticle::with(['category', 'author'])
-            ->when($request->search, fn($q) => $q->where(function ($q) use ($request) {
+            ->when($request->search, fn ($q) => $q->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->search}%")
-                  ->orWhere('content', 'like', "%{$request->search}%");
+                    ->orWhere('content', 'like', "%{$request->search}%");
             }))
-            ->when($request->category_id, fn($q) => $q->where('category_id', $request->category_id))
+            ->when($request->category_id, fn ($q) => $q->where('category_id', $request->category_id))
             ->latest()
             ->paginate($request->per_page ?? 25)
             ->withQueryString();
@@ -56,7 +57,7 @@ class KnowledgeArticleController extends Controller
 
         $article = KnowledgeArticle::create($validated);
 
-        ActivityLogService::log(auth()->id(), 'kb_article_create', KnowledgeArticle::class, $article->id, $article->title);
+        ActivityLogService::logCustom(auth()->id(), 'kb_article_create', KnowledgeArticle::class, $article->id, $article->title);
 
         return redirect()->route('admin.knowledge.index')->with('success', 'Article created.');
     }
@@ -85,7 +86,7 @@ class KnowledgeArticleController extends Controller
 
         $article->update($validated);
 
-        ActivityLogService::log(auth()->id(), 'kb_article_update', KnowledgeArticle::class, $article->id, $article->title);
+        ActivityLogService::logCustom(auth()->id(), 'kb_article_update', KnowledgeArticle::class, $article->id, $article->title);
 
         return redirect()->route('admin.knowledge.index')->with('success', 'Article updated.');
     }
@@ -94,12 +95,12 @@ class KnowledgeArticleController extends Controller
     {
         $article->delete();
 
-        ActivityLogService::log(auth()->id(), 'kb_article_delete', KnowledgeArticle::class, $article->id, $article->title);
+        ActivityLogService::logCustom(auth()->id(), 'kb_article_delete', KnowledgeArticle::class, $article->id, $article->title);
 
         return redirect()->route('admin.knowledge.index')->with('success', 'Article deleted.');
     }
 
-    public function toggleFeatured(KnowledgeArticle $article): \Illuminate\Http\JsonResponse
+    public function toggleFeatured(KnowledgeArticle $article): JsonResponse
     {
         $article->update(['is_featured' => ! $article->is_featured]);
 

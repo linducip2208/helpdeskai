@@ -17,11 +17,11 @@ class WebPushService
         ]);
 
         if (! $pkey) {
-            throw new RuntimeException('Failed to generate EC keypair: ' . openssl_error_string());
+            throw new RuntimeException('Failed to generate EC keypair: '.openssl_error_string());
         }
 
         $details = openssl_pkey_get_details($pkey);
-        $publicRaw = "\x04" . $details['ec']['x'] . $details['ec']['y'];
+        $publicRaw = "\x04".$details['ec']['x'].$details['ec']['y'];
 
         openssl_pkey_export($pkey, $privPem);
 
@@ -42,6 +42,7 @@ class WebPushService
 
         if (! $publicKey || ! $privatePem) {
             Log::warning('Web push not sent — VAPID keys missing. Run php artisan webpush:vapid-keys');
+
             return false;
         }
 
@@ -54,7 +55,7 @@ class WebPushService
         );
 
         $headers = [
-            'Authorization' => 'vapid t=' . $jwt . ', k=' . $publicKey,
+            'Authorization' => 'vapid t='.$jwt.', k='.$publicKey,
             'Content-Type' => 'application/octet-stream',
             'Content-Encoding' => 'aes128gcm',
             'TTL' => (string) config('webpush.ttl', 86400),
@@ -67,12 +68,14 @@ class WebPushService
 
             if ($response->status() === 404 || $response->status() === 410) {
                 $subscription->delete();
+
                 return false;
             }
 
             return $response->successful();
         } catch (\Throwable $e) {
             Log::warning('Web push send failed', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -87,12 +90,12 @@ class WebPushService
             'sub' => config('webpush.vapid.subject', 'mailto:admin@example.com'),
         ]));
 
-        $message = $header . '.' . $payload;
+        $message = $header.'.'.$payload;
 
         openssl_sign($message, $derSignature, $privatePem, OPENSSL_ALGO_SHA256);
         $joseSig = $this->derToJose($derSignature);
 
-        return $message . '.' . $this->b64url($joseSig);
+        return $message.'.'.$this->b64url($joseSig);
     }
 
     private function encryptPayload(string $payload, string $userPublic, string $authSecret): string
@@ -102,34 +105,35 @@ class WebPushService
             'private_key_type' => OPENSSL_KEYTYPE_EC,
         ]);
         $localDetails = openssl_pkey_get_details($local);
-        $localPublic = "\x04" . $localDetails['ec']['x'] . $localDetails['ec']['y'];
+        $localPublic = "\x04".$localDetails['ec']['x'].$localDetails['ec']['y'];
 
         $userPubPem = $this->rawPublicKeyToPem($userPublic);
         $sharedSecret = openssl_pkey_derive($userPubPem, $local);
 
         $salt = random_bytes(16);
 
-        $keyInfo = "WebPush: info\x00" . $userPublic . $localPublic;
+        $keyInfo = "WebPush: info\x00".$userPublic.$localPublic;
         $ikm = hash_hkdf('sha256', $sharedSecret, 32, $keyInfo, $authSecret);
 
         $cek = hash_hkdf('sha256', $ikm, 16, "Content-Encoding: aes128gcm\x00", $salt);
         $nonce = hash_hkdf('sha256', $ikm, 12, "Content-Encoding: nonce\x00", $salt);
 
-        $padded = $payload . "\x02";
+        $padded = $payload."\x02";
 
         $tag = '';
         $ciphertext = openssl_encrypt($padded, 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
 
         $rs = 4096;
-        $header = $salt . pack('N', $rs) . chr(strlen($localPublic)) . $localPublic;
+        $header = $salt.pack('N', $rs).chr(strlen($localPublic)).$localPublic;
 
-        return $header . $ciphertext . $tag;
+        return $header.$ciphertext.$tag;
     }
 
     private function originOf(string $url): string
     {
         $parts = parse_url($url);
-        return $parts['scheme'] . '://' . $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '');
+
+        return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
     }
 
     private function b64url(string $bin): string
@@ -143,17 +147,18 @@ class WebPushService
         if ($pad < 4) {
             $str .= str_repeat('=', $pad);
         }
+
         return base64_decode(strtr($str, '-_', '+/'));
     }
 
     private function rawPublicKeyToPem(string $raw): string
     {
         $der = "\x30\x59\x30\x13\x06\x07\x2A\x86\x48\xCE\x3D\x02\x01"
-            . "\x06\x08\x2A\x86\x48\xCE\x3D\x03\x01\x07\x03\x42\x00" . $raw;
+            ."\x06\x08\x2A\x86\x48\xCE\x3D\x03\x01\x07\x03\x42\x00".$raw;
 
         return "-----BEGIN PUBLIC KEY-----\n"
-            . chunk_split(base64_encode($der), 64, "\n")
-            . "-----END PUBLIC KEY-----\n";
+            .chunk_split(base64_encode($der), 64, "\n")
+            ."-----END PUBLIC KEY-----\n";
     }
 
     private function derToJose(string $der): string
@@ -167,6 +172,6 @@ class WebPushService
         $r = ltrim($r, "\x00");
         $s = ltrim($s, "\x00");
 
-        return str_pad($r, 32, "\x00", STR_PAD_LEFT) . str_pad($s, 32, "\x00", STR_PAD_LEFT);
+        return str_pad($r, 32, "\x00", STR_PAD_LEFT).str_pad($s, 32, "\x00", STR_PAD_LEFT);
     }
 }

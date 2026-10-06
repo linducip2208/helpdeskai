@@ -17,7 +17,7 @@ class GeminiAdapter implements AiAdapterInterface
 
             foreach ($request['messages'] as $message) {
                 if ($message['role'] === 'system') {
-                    $systemInstructions .= $message['content'] . "\n";
+                    $systemInstructions .= $message['content']."\n";
                 } else {
                     $role = $message['role'] === 'assistant' ? 'model' : 'user';
                     $contents[] = [
@@ -35,11 +35,11 @@ class GeminiAdapter implements AiAdapterInterface
                 ];
             }
 
-            $url = rtrim($provider->base_url, '/') . '/v1beta/models/' . $request['model'] . ':generateContent';
+            $url = rtrim($provider->base_url, '/').'/v1beta/models/'.$request['model'].':generateContent';
 
-            $response = Http::timeout(120)
+            $response = Http::timeout(60)->retry(1, 500)
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->get($url, array_merge(['key' => $provider->decrypted_api_key], $body));
+                ->post($url.'?key='.urlencode((string) $provider->decrypted_api_key), $body);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -55,10 +55,10 @@ class GeminiAdapter implements AiAdapterInterface
             Log::error('Gemini API error', [
                 'provider' => $provider->name,
                 'status' => $response->status(),
-                'body' => $response->body(),
+                'body' => substr($response->body(), 0, 2000),
             ]);
 
-            return ['error' => "API error: {$response->status()} - {$response->body()}"];
+            return ['error' => "Provider request failed (HTTP {$response->status()})."];
         } catch (\Exception $e) {
             Log::error('Gemini request failed', [
                 'provider' => $provider->name,
@@ -72,7 +72,7 @@ class GeminiAdapter implements AiAdapterInterface
     public function testConnection(AiProvider $provider): array
     {
         try {
-            $url = rtrim($provider->base_url, '/') . '/v1beta/models';
+            $url = rtrim($provider->base_url, '/').'/v1beta/models';
 
             $response = Http::timeout(30)
                 ->get($url, ['key' => $provider->decrypted_api_key]);
@@ -90,7 +90,7 @@ class GeminiAdapter implements AiAdapterInterface
     public function listModels(AiProvider $provider): array
     {
         try {
-            $url = rtrim($provider->base_url, '/') . '/v1beta/models';
+            $url = rtrim($provider->base_url, '/').'/v1beta/models';
 
             $response = Http::timeout(30)
                 ->get($url, ['key' => $provider->decrypted_api_key]);

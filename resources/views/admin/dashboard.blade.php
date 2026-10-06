@@ -1,164 +1,173 @@
 @extends('layouts.admin')
-@section('title', 'Dashboard')
+@section('title', __('Dashboard'))
 @section('content')
 
-<div class="space-y-6">
-
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Tickets</p>
-                    <p class="text-3xl font-bold text-slate-900 mt-1">{{ $totalTickets ?? 0 }}</p>
+<div class="row row-cards">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="subheader">{{ __('Total Tickets') }}</div>
                 </div>
-                <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                </div>
+                <div class="h1 mb-1">{{ $totalTickets ?? 0 }}</div>
+                <div class="text-muted small">{{ __(':today today / :week this week', ['today' => $ticketsToday ?? 0, 'week' => $ticketsThisWeek ?? 0]) }}</div>
             </div>
-            <p class="text-xs text-slate-400 mt-4">
-                <span class="text-emerald-500 font-medium">+ {{ $ticketGrowth ?? '12%' }}</span> from last month
-            </p>
         </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Open Tickets</p>
-                    <p class="text-3xl font-bold text-slate-900 mt-1">{{ $openTickets ?? 0 }}</p>
-                </div>
-                <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="subheader">{{ __('Open Tickets') }}</div>
+                <div class="h1 mb-1">{{ $openTickets ?? 0 }}</div>
+                <div class="text-muted small">{{ __(':pending pending / :unassigned unassigned', ['pending' => $pendingTickets ?? 0, 'unassigned' => $unassignedTickets ?? 0]) }}</div>
             </div>
-            <p class="text-xs text-slate-400 mt-4">{{ $openPercent ?? '35%' }} of total</p>
         </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Avg Response Time</p>
-                    <p class="text-3xl font-bold text-slate-900 mt-1">{{ $avgResponse ?? '2.4h' }}</p>
-                </div>
-                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="subheader">{{ __('Avg First Response') }}</div>
+                <div class="h1 mb-1">{{ $avgResponse ?? '—' }}</div>
+                <div class="text-muted small">{{ __('Avg resolution: :time', ['time' => $avgResolution ?? '—']) }}</div>
             </div>
-            <p class="text-xs text-slate-400 mt-4">
-                <span class="text-emerald-500 font-medium">-0.3h</span> improvement
-            </p>
         </div>
-
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">SLA Compliance</p>
-                    <p class="text-3xl font-bold text-slate-900 mt-1">{{ $slaCompliance ?? '94%' }}</p>
-                </div>
-                <div class="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="subheader">{{ __('SLA Compliance') }}</div>
+                <div class="h1 mb-1">{{ $slaCompliance ?? '—' }}</div>
+                <div class="text-muted small">{{ __(':count breached / CSAT :csat', ['count' => $slaBreached ?? 0, 'csat' => $csatAvg ?? '—']) }}</div>
             </div>
-            <p class="text-xs text-slate-400 mt-4">
-                <span class="text-emerald-500 font-medium">+2%</span> from last month
-            </p>
         </div>
     </div>
 
-    <!-- Chart Placeholder -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 class="text-lg font-semibold text-slate-900 mb-4">Ticket Trends</h3>
-        <div class="h-64 flex items-end space-x-3">
-            @foreach(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] as $i => $month)
-                <div class="flex-1 flex flex-col items-center">
-                    <div class="w-full bg-indigo-100 rounded-t relative" style="height: {{ rand(20, 90) }}%">
-                        <div class="absolute inset-0 bg-indigo-500 rounded-t opacity-70 hover:opacity-100 transition"></div>
-                    </div>
-                    <span class="text-xs text-slate-400 mt-2">{{ $month }}</span>
-                </div>
-            @endforeach
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Ticket Trends (14 days)') }}</h3>
+            </div>
+            <div class="card-body">
+                <div id="chart-trends" style="min-height: 240px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Tickets by Status') }}</h3>
+            </div>
+            <div class="card-body">
+                <div id="chart-status" style="min-height: 240px;"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Two Column: Recent Tickets + Recent Users -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Recent Tickets -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 class="text-lg font-semibold text-slate-900">Recent Tickets</h3>
-                <a href="{{ route('admin.tickets.index') }}" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">View all</a>
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Recent Tickets') }}</h3>
+                <div class="card-actions">
+                    <a href="{{ route('admin.tickets.index') }}" class="btn btn-sm">{{ __('View all') }}</a>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Subject</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Priority</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                            <th>{{ __('Subject') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th>{{ __('Priority') }}</th>
+                            <th>{{ __('Date') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         @forelse($recentTickets ?? [] as $ticket)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 text-sm font-medium text-slate-900">{{ $ticket->subject }}</td>
-                            @php $st = (string) ($ticket->status?->value ?? $ticket->status); @endphp
-                            <td class="px-6 py-4">
-                                <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {{ $st === 'open' ? 'bg-emerald-100 text-emerald-700' : '' }}
-                                    {{ $st === 'pending' ? 'bg-amber-100 text-amber-700' : '' }}
-                                    {{ $st === 'closed' ? 'bg-slate-100 text-slate-700' : '' }}">
-                                    {{ ucfirst($st) }}
+                        @php $st = (string) ($ticket->status?->value ?? $ticket->status); @endphp
+                        <tr>
+                            <td><a href="{{ route('admin.tickets.show', $ticket) }}">{{ $ticket->subject }}</a></td>
+                            <td>
+                                <span class="badge {{ in_array($st, ['open', 'resolved', 'answered']) ? 'bg-green-lt' : ($st === 'in_progress' ? 'bg-blue-lt' : ($st === 'closed' ? 'bg-secondary' : 'bg-yellow-lt')) }}">
+                                    {{ ucfirst(str_replace('_', ' ', $st)) }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-sm text-slate-500">{{ ucfirst($ticket->priority ?? 'normal') }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-500">{{ $ticket->created_at->format('M d, Y') }}</td>
+                            <td class="text-muted">{{ ucfirst($ticket->priority ?? 'medium') }}</td>
+                            <td class="text-muted">{{ wib($ticket->created_at, 'd F Y', false) }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-slate-400">No tickets yet.</td>
+                            <td colspan="4"><div class="empty"><p class="empty-title">{{ __('No tickets yet.') }}</p></div></td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
 
-        <!-- Recent Users -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h3 class="text-lg font-semibold text-slate-900">Recent Users</h3>
-                <a href="{{ route('admin.users.index') }}" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">View all</a>
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Agent Workload') }}</h3>
+                <div class="card-actions">
+                    <a href="{{ route('admin.users.index') }}" class="btn btn-sm">{{ __('View all') }}</a>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
+            <div class="card-body">
+                @forelse($agentWorkload ?? [] as $row)
+                <div class="row align-items-center mb-2">
+                    <div class="col-auto">
+                        <span class="avatar avatar-sm">{{ strtoupper(substr($row->assignedTo->name ?? '?', 0, 1)) }}</span>
+                    </div>
+                    <div class="col">
+                        <div>{{ $row->assignedTo->name ?? __('Unassigned') }}</div>
+                        <div class="progress progress-sm">
+                            @php $pct = ($openTickets ?? 0) > 0 ? min(100, round($row->total / max(1, $openTickets) * 100)) : 0; @endphp
+                            <div class="progress-bar bg-primary" style="width: {{ $pct }}%" role="progressbar" aria-valuenow="{{ $pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ __('Workload') }}"></div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <span class="badge bg-blue-lt">{{ $row->total }}</span>
+                    </div>
+                </div>
+                @empty
+                <div class="empty"><p class="empty-title">{{ __('No open assigned tickets.') }}</p></div>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Recent Users') }}</h3>
+                <div class="card-actions">
+                    <a href="{{ route('admin.users.index') }}" class="btn btn-sm">{{ __('View all') }}</a>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">User</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Joined</th>
+                            <th>{{ __('User') }}</th>
+                            <th>{{ __('Joined') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         @forelse($recentUsers ?? [] as $user)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4">
-                                <div class="flex items-center">
-                                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-sm mr-3">
-                                        {{ substr($user->name, 0, 1) }}
-                                    </div>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="avatar avatar-sm me-2">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                                     <div>
-                                        <p class="text-sm font-medium text-slate-900">{{ $user->name }}</p>
-                                        <p class="text-xs text-slate-400">{{ $user->email }}</p>
+                                        <div>{{ $user->name }}</div>
+                                        <div class="text-muted small">{{ $user->email }}</div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-slate-500">{{ ucfirst($user->role ?? 'user') }}</td>
-                            <td class="px-6 py-4 text-sm text-slate-500">{{ $user->created_at->format('M d, Y') }}</td>
+                            <td class="text-muted">{{ wib($user->created_at, 'd F Y', false) }}</td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="3" class="px-6 py-12 text-center text-slate-400">No users yet.</td>
+                            <td colspan="2"><div class="empty"><p class="empty-title">{{ __('No users yet.') }}</p></div></td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -166,7 +175,37 @@
             </div>
         </div>
     </div>
-
 </div>
+
+<script>
+(function () {
+    if (typeof window.ApexCharts === 'undefined') return;
+
+    var trendsEl = document.querySelector('#chart-trends');
+    if (trendsEl) {
+        new window.ApexCharts(trendsEl, {
+            chart: { type: 'area', height: 240, toolbar: { show: false }, fontFamily: 'inherit' },
+            series: [{ name: '{{ __('Tickets') }}', data: @json(($ticketTrends ?? ['values' => []])['values'] ?? []) }],
+            xaxis: { categories: @json(($ticketTrends ?? ['labels' => []])['labels'] ?? []) },
+            stroke: { curve: 'smooth', width: 2 },
+            dataLabels: { enabled: false },
+            colors: ['#066fd1'],
+            grid: { strokeDashArray: 4 },
+        }).render();
+    }
+
+    var statusEl = document.querySelector('#chart-status');
+    if (statusEl) {
+        var byStatus = @json($byStatus ?? []);
+        new window.ApexCharts(statusEl, {
+            chart: { type: 'donut', height: 240, fontFamily: 'inherit' },
+            series: Object.values(byStatus),
+            labels: Object.keys(byStatus).map(function (s) { return s.replace(/_/g, ' '); }),
+            legend: { position: 'bottom' },
+            dataLabels: { enabled: true },
+        }).render();
+    }
+})();
+</script>
 
 @endsection

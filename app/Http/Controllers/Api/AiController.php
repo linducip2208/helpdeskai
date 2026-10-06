@@ -9,8 +9,30 @@ use Illuminate\Http\Request;
 
 class AiController extends Controller
 {
+    protected function ensureStaff(Request $request): void
+    {
+        abort_unless(
+            $request->user()->hasRole(['admin', 'manager', 'agent']),
+            403,
+            'AI tools are available to support staff only.'
+        );
+    }
+
+    protected function envelope(array $result, string $okMessage): JsonResponse
+    {
+        $failed = isset($result['error']);
+
+        return response()->json([
+            'success' => ! $failed,
+            'data' => $failed ? null : $result,
+            'message' => $failed ? 'AI provider unavailable. Please try again later.' : $okMessage,
+        ], $failed ? 503 : 200);
+    }
+
     public function classify(Request $request): JsonResponse
     {
+        $this->ensureStaff($request);
+
         $request->validate([
             'subject' => 'required|string|max:500',
             'body' => 'required|string|max:5000',
@@ -21,11 +43,13 @@ class AiController extends Controller
             ['role' => 'user', 'content' => "Subject: {$request->subject}\nBody: {$request->body}"],
         ]);
 
-        return response()->json(['data' => $result]);
+        return $this->envelope($result, 'Ticket classified.');
     }
 
     public function suggest(Request $request): JsonResponse
     {
+        $this->ensureStaff($request);
+
         $request->validate([
             'ticket_subject' => 'required|string|max:500',
             'ticket_body' => 'required|string|max:5000',
@@ -39,11 +63,13 @@ class AiController extends Controller
             ['role' => 'user', 'content' => "Ticket subject: {$request->ticket_subject}\nTicket body: {$request->ticket_body}\nProvide a helpful response."],
         ]);
 
-        return response()->json(['data' => $result]);
+        return $this->envelope($result, 'Suggestion generated.');
     }
 
     public function sentiment(Request $request): JsonResponse
     {
+        $this->ensureStaff($request);
+
         $request->validate([
             'text' => 'required|string|max:5000',
         ]);
@@ -53,6 +79,6 @@ class AiController extends Controller
             ['role' => 'user', 'content' => $request->text],
         ]);
 
-        return response()->json(['data' => $result]);
+        return $this->envelope($result, 'Sentiment analyzed.');
     }
 }

@@ -13,9 +13,7 @@ use Illuminate\View\View;
 
 class TwoFactorController extends Controller
 {
-    public function __construct(private TotpService $totp)
-    {
-    }
+    public function __construct(private TotpService $totp) {}
 
     public function setup(Request $request): View|RedirectResponse
     {
@@ -131,6 +129,7 @@ class TwoFactorController extends Controller
             $secret = Crypt::decryptString($user->two_factor_secret);
             if ($this->totp->verify($secret, $code)) {
                 $request->session()->put('2fa_passed', true);
+
                 return redirect()->intended(route('dashboard', absolute: false));
             }
         } else {
@@ -145,6 +144,7 @@ class TwoFactorController extends Controller
                     ])->save();
 
                     $request->session()->put('2fa_passed', true);
+
                     return redirect()->intended(route('dashboard', absolute: false));
                 }
             }

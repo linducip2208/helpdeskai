@@ -1,47 +1,50 @@
 <?php
 
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\BlogController;
-use App\Http\Controllers\ServicePageController;
-use App\Http\Controllers\KnowledgeBaseController;
-use App\Http\Controllers\ContactController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProgrammaticSeoController;
-use App\Http\Controllers\PushSubscriptionController;
-use App\Http\Controllers\User\DashboardController as UserDashboardController;
-use App\Http\Controllers\User\TicketController as UserTicketController;
-use App\Http\Controllers\User\ConversationController as UserConversationController;
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\TicketController as AdminTicketController;
-use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AiFeatureConfigController as AdminAiFeatureController;
+use App\Http\Controllers\Admin\AiProviderController;
+use App\Http\Controllers\Admin\AiUsageLogController;
+use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\ApiKeyController;
+use App\Http\Controllers\Admin\AutomationRuleController;
+use App\Http\Controllers\Admin\CannedResponseController;
 use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ConversationController as AdminConversationController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\EmailLogController;
+use App\Http\Controllers\Admin\EmailTemplateController;
+use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\KnowledgeArticleController as AdminKnowledgeController;
 use App\Http\Controllers\Admin\KnowledgeCategoryController;
 use App\Http\Controllers\Admin\KnowledgeFaqController;
-use App\Http\Controllers\Admin\ServiceController;
-use App\Http\Controllers\Admin\CannedResponseController;
-use App\Http\Controllers\Admin\SlaPolicyController;
-use App\Http\Controllers\Admin\AutomationRuleController;
-use App\Http\Controllers\Admin\AiProviderController;
-use App\Http\Controllers\Admin\AiFeatureConfigController as AdminAiFeatureController;
-use App\Http\Controllers\Admin\PostController;
-use App\Http\Controllers\Admin\EmailTemplateController;
-use App\Http\Controllers\Admin\SettingController as AdminSettingController;
-use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\ApiKeyController;
-use App\Http\Controllers\Admin\AnalyticsController;
-use App\Http\Controllers\Admin\ExportController;
-use App\Http\Controllers\Admin\AiUsageLogController;
+use App\Http\Controllers\Admin\LicenseController as AdminLicenseController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\PushSubscriptionController as AdminPushSubscriptionController;
 use App\Http\Controllers\Admin\SeoMetaController;
-use App\Http\Controllers\Admin\EmailLogController;
-use App\Http\Controllers\Admin\LicenseController as AdminLicenseController;
+use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Admin\SlaPolicyController;
+use App\Http\Controllers\Admin\TicketController as AdminTicketController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\KnowledgeBaseController;
+use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProgrammaticSeoController;
+use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\ServicePageController;
+use App\Http\Controllers\User\ConversationController as UserConversationController;
+use App\Http\Controllers\User\DashboardController as UserDashboardController;
+use App\Http\Controllers\User\TicketController as UserTicketController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/feed.xml', [BlogController::class, 'feed'])->name('blog.feed');
@@ -56,7 +59,7 @@ Route::get('/knowledge-base/category/{slug}', [KnowledgeBaseController::class, '
 Route::get('/knowledge-base/{slug}', [KnowledgeBaseController::class, 'show'])->name('knowledge-base.show');
 
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
-Route::post('/contact', [ContactController::class, 'submit'])->name('contact.send');
+Route::post('/contact', [ContactController::class, 'submit'])->name('contact.send')->middleware('throttle:10,1');
 
 Route::view('/docs', 'docs')->name('docs');
 
@@ -80,11 +83,13 @@ Route::middleware(['auth', 'verified', '2fa'])->group(function () {
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
     Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
     Route::post('/push/test', [PushSubscriptionController::class, 'test'])->name('push.test');
+    Route::post('/impersonation/stop', [UserController::class, 'stopImpersonate'])->name('impersonation.stop');
 });
 
 Route::middleware(['auth', 'verified', '2fa'])->name('user.')->group(function () {
     Route::resource('tickets', UserTicketController::class)->except(['edit']);
     Route::post('/tickets/{ticket}/reply', [UserTicketController::class, 'reply'])->name('tickets.reply');
+    Route::get('/attachments/{attachment}/download', [UserTicketController::class, 'downloadAttachment'])->name('attachments.download');
 
     Route::get('/conversations', [UserConversationController::class, 'index'])->name('conversations.index');
     Route::get('/conversations/{conversation}', [UserConversationController::class, 'show'])->name('conversations.show');
@@ -101,10 +106,11 @@ Route::middleware(['auth', 'verified', '2fa', 'role:admin'])->prefix('admin')->n
     Route::post('/tickets/bulk', [AdminTicketController::class, 'bulkAction'])->name('tickets.bulk');
     Route::post('/tickets/{ticket}/star', [AdminTicketController::class, 'star'])->name('tickets.star');
     Route::post('/tickets/{ticket}/reply', [AdminTicketController::class, 'reply'])->name('tickets.reply');
-    Route::post('/tickets/{ticket}/assign', [AdminTicketController::class, 'assign'])->name('tickets.assign');
-    Route::post('/tickets/{ticket}/update-status', [AdminTicketController::class, 'updateStatus'])->name('tickets.update-status');
-    Route::post('/tickets/{ticket}/update-priority', [AdminTicketController::class, 'updatePriority'])->name('tickets.update-priority');
+    Route::patch('/tickets/{ticket}/assign', [AdminTicketController::class, 'assign'])->name('tickets.assign');
+    Route::patch('/tickets/{ticket}/update-status', [AdminTicketController::class, 'updateStatus'])->name('tickets.update-status');
+    Route::patch('/tickets/{ticket}/update-priority', [AdminTicketController::class, 'updatePriority'])->name('tickets.update-priority');
     Route::post('/tickets/{ticket}/suggest', [AdminTicketController::class, 'suggest'])->name('tickets.suggest');
+    Route::get('/attachments/{attachment}/download', [AdminTicketController::class, 'downloadAttachment'])->name('attachments.download');
 
     Route::resource('departments', DepartmentController::class)->except(['show']);
     Route::resource('categories', CategoryController::class)->except(['show']);

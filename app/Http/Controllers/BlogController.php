@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class BlogController extends Controller
@@ -13,7 +14,7 @@ class BlogController extends Controller
     {
         $posts = Post::with('user')
             ->where('status', 'published')
-            ->when($request->category, fn($q) => $q->where('category', $request->category))
+            ->when($request->category, fn ($q) => $q->where('category', $request->category))
             ->latest()
             ->paginate(12);
 
@@ -70,33 +71,33 @@ class BlogController extends Controller
         $siteName = config('app.name', 'HelpDesk AI');
         $now = now()->toRssString();
 
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
         $xml .= "  <channel>\n";
-        $xml .= '    <title>' . htmlspecialchars($siteName . ' Blog') . "</title>\n";
-        $xml .= '    <link>' . url('/blog') . "</link>\n";
-        $xml .= '    <description>' . htmlspecialchars('Latest articles from ' . $siteName) . "</description>\n";
+        $xml .= '    <title>'.htmlspecialchars($siteName.' Blog')."</title>\n";
+        $xml .= '    <link>'.url('/blog')."</link>\n";
+        $xml .= '    <description>'.htmlspecialchars('Latest articles from '.$siteName)."</description>\n";
         $xml .= "    <language>en</language>\n";
-        $xml .= '    <lastBuildDate>' . $now . "</lastBuildDate>\n";
-        $xml .= '    <atom:link href="' . url('/blog/feed.xml') . '" rel="self" type="application/rss+xml" />' . "\n";
+        $xml .= '    <lastBuildDate>'.$now."</lastBuildDate>\n";
+        $xml .= '    <atom:link href="'.url('/blog/feed.xml').'" rel="self" type="application/rss+xml" />'."\n";
 
         foreach ($posts as $post) {
-            $link = url('/blog/' . $post->slug);
+            $link = url('/blog/'.$post->slug);
             $pubDate = ($post->published_at ?? $post->created_at)->toRssString();
-            $desc = $post->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($post->content), 300);
+            $desc = $post->excerpt ?: Str::limit(strip_tags($post->content), 300);
 
             $xml .= "    <item>\n";
-            $xml .= '      <title>' . htmlspecialchars($post->title) . "</title>\n";
-            $xml .= '      <link>' . $link . "</link>\n";
-            $xml .= '      <guid isPermaLink="true">' . $link . "</guid>\n";
-            $xml .= '      <pubDate>' . $pubDate . "</pubDate>\n";
+            $xml .= '      <title>'.htmlspecialchars($post->title)."</title>\n";
+            $xml .= '      <link>'.$link."</link>\n";
+            $xml .= '      <guid isPermaLink="true">'.$link."</guid>\n";
+            $xml .= '      <pubDate>'.$pubDate."</pubDate>\n";
             if ($post->author?->name ?? $post->user?->name) {
-                $xml .= '      <author>' . htmlspecialchars(($post->user?->name ?? 'Author')) . "</author>\n";
+                $xml .= '      <author>'.htmlspecialchars(($post->user?->name ?? 'Author'))."</author>\n";
             }
             if ($post->category) {
-                $xml .= '      <category>' . htmlspecialchars($post->category) . "</category>\n";
+                $xml .= '      <category>'.htmlspecialchars($post->category)."</category>\n";
             }
-            $xml .= '      <description>' . htmlspecialchars($desc) . "</description>\n";
+            $xml .= '      <description>'.htmlspecialchars($desc)."</description>\n";
             $xml .= "    </item>\n";
         }
 

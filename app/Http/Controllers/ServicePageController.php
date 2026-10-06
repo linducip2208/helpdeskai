@@ -17,6 +17,7 @@ class ServicePageController extends Controller
     public function show(string $slug): View
     {
         $service = Service::where('slug', $slug)->where('is_active', true)->firstOrFail();
+
         return view('services.show', ['service' => $service]);
     }
 }

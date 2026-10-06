@@ -17,6 +17,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class DemoDataSeeder extends Seeder
 {
@@ -61,9 +62,9 @@ class DemoDataSeeder extends Seeder
 
     private function seedCustomers(int $n): array
     {
-        $existing = User::whereHas('roles', fn($q) => $q->where('name', 'customer'))->count();
+        $existing = User::whereHas('roles', fn ($q) => $q->where('name', 'customer'))->count();
         if ($existing >= $n) {
-            return User::whereHas('roles', fn($q) => $q->where('name', 'customer'))->limit($n + 1)->pluck('id')->all();
+            return User::whereHas('roles', fn ($q) => $q->where('name', 'customer'))->limit($n + 1)->pluck('id')->all();
         }
 
         $rows = [];
@@ -85,11 +86,13 @@ class DemoDataSeeder extends Seeder
                 $rows = [];
             }
         }
-        if ($rows) User::insert($rows);
+        if ($rows) {
+            User::insert($rows);
+        }
 
         $ids = User::whereLike('email', 'customer%@demo.test')->pluck('id')->all();
-        $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
-        DB::table('model_has_roles')->insertOrIgnore(array_map(fn($id) => [
+        $role = Role::firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
+        DB::table('model_has_roles')->insertOrIgnore(array_map(fn ($id) => [
             'role_id' => $role->id,
             'model_type' => User::class,
             'model_id' => $id,
@@ -100,9 +103,9 @@ class DemoDataSeeder extends Seeder
 
     private function seedAgents(int $n): array
     {
-        $existing = User::whereHas('roles', fn($q) => $q->where('name', 'agent'))->count();
+        $existing = User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->count();
         if ($existing >= $n) {
-            return User::whereHas('roles', fn($q) => $q->where('name', 'agent'))->limit($n + 1)->pluck('id')->all();
+            return User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->limit($n + 1)->pluck('id')->all();
         }
 
         $rows = [];
@@ -119,11 +122,13 @@ class DemoDataSeeder extends Seeder
                 'updated_at' => $now,
             ];
         }
-        if ($rows) User::insert($rows);
+        if ($rows) {
+            User::insert($rows);
+        }
 
         $ids = User::whereLike('email', 'agent%@demo.test')->pluck('id')->all();
-        $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'agent', 'guard_name' => 'web']);
-        DB::table('model_has_roles')->insertOrIgnore(array_map(fn($id) => [
+        $role = Role::firstOrCreate(['name' => 'agent', 'guard_name' => 'web']);
+        DB::table('model_has_roles')->insertOrIgnore(array_map(fn ($id) => [
             'role_id' => $role->id,
             'model_type' => User::class,
             'model_id' => $id,
@@ -138,10 +143,10 @@ class DemoDataSeeder extends Seeder
         $rows = [];
         $names = ['Zendesk', 'Freshdesk', 'Intercom', 'Help Scout', 'Front', 'Kayako', 'LiveAgent', 'HappyFox', 'Groove', 'Kustomer', 'Gorgias', 'Tidio', 'Crisp', 'Drift', 'Tawk.to', 'Olark', 'LiveChat', 'Zoho Desk', 'Salesforce Service Cloud', 'ServiceNow', 'Jira Service Management', 'TeamSupport', 'ManageEngine ServiceDesk', 'osTicket', 'OTRS', 'Spiceworks', 'Vivantio', 'TOPdesk', 'Cherwell', 'BMC Helix', 'Hiver', 'Helpshift', 'UserVoice', 'Trengo', 'ChannelReply', 'Re:amaze', 'Userlike', 'Pure Chat', 'JivoChat', 'SnapEngage'];
         for ($i = 0; $i < $n; $i++) {
-            $name = $names[$i] ?? ('HelpDesk Tool ' . $i);
+            $name = $names[$i] ?? ('HelpDesk Tool '.$i);
             $rows[] = [
                 'title' => $name,
-                'slug' => Str::slug($name . '-' . $i),
+                'slug' => Str::slug($name.'-'.$i),
                 'icon' => null,
                 'description' => "Powerful customer support platform {$name}.",
                 'content' => "<p>{$name} is a feature-rich helpdesk solution used by thousands of teams worldwide.</p>",
@@ -166,6 +171,7 @@ class DemoDataSeeder extends Seeder
             );
             $ids[] = $cat->id;
         }
+
         return $ids;
     }
 
@@ -180,21 +186,21 @@ class DemoDataSeeder extends Seeder
             'Multi-language support', 'Custom workflow rules', 'Reporting and analytics overview',
         ];
         for ($i = 0; $i < $n; $i++) {
-            $title = ($titles[$i % count($titles)]) . ' (Part ' . (intval($i / count($titles)) + 1) . ')';
+            $title = ($titles[$i % count($titles)]).' (Part '.(intval($i / count($titles)) + 1).')';
             $rows[] = [
                 'title' => $title,
-                'slug' => Str::slug($title . '-' . $i),
+                'slug' => Str::slug($title.'-'.$i),
                 'category_id' => $catIds[array_rand($catIds)],
                 'user_id' => $userIds[array_rand($userIds)],
-                'content' => '<p>Detailed walkthrough for ' . $title . '. ' . str_repeat('Step-by-step instructions follow with screenshots and tips. ', 5) . '</p>',
-                'excerpt' => 'Learn ' . $title . ' in this quick guide.',
+                'content' => '<p>Detailed walkthrough for '.$title.'. '.str_repeat('Step-by-step instructions follow with screenshots and tips. ', 5).'</p>',
+                'excerpt' => 'Learn '.$title.' in this quick guide.',
                 'status' => rand(0, 9) < 8 ? 'published' : 'draft',
                 'is_featured' => rand(0, 9) < 2,
                 'view_count' => rand(0, 5000),
                 'helpful_count' => rand(0, 200),
                 'not_helpful_count' => rand(0, 30),
                 'meta_title' => $title,
-                'meta_description' => 'Quick guide on ' . $title,
+                'meta_description' => 'Quick guide on '.$title,
                 'created_at' => $now->copy()->subDays(rand(1, 365)),
                 'updated_at' => $now,
             ];
@@ -203,7 +209,9 @@ class DemoDataSeeder extends Seeder
                 $rows = [];
             }
         }
-        if ($rows) KnowledgeArticle::insertOrIgnore($rows);
+        if ($rows) {
+            KnowledgeArticle::insertOrIgnore($rows);
+        }
     }
 
     private function seedPosts(int $n, array $userIds): void
@@ -212,13 +220,13 @@ class DemoDataSeeder extends Seeder
         $rows = [];
         $topics = ['Customer support trends', 'AI in helpdesk', 'SLA management tips', 'Reducing ticket volume', 'Team productivity', 'Customer satisfaction metrics', 'Knowledge base strategy', 'Omnichannel support', 'Automation workflows', 'Helpdesk security'];
         for ($i = 0; $i < $n; $i++) {
-            $title = $topics[$i % count($topics)] . ' #' . ($i + 1);
+            $title = $topics[$i % count($topics)].' #'.($i + 1);
             $rows[] = [
                 'title' => $title,
                 'slug' => Str::slug($title),
                 'user_id' => $userIds[array_rand($userIds)],
-                'content' => '<p>' . str_repeat($title . '. Detailed analysis and actionable insights for support teams. ', 10) . '</p>',
-                'excerpt' => 'Insights on ' . $title,
+                'content' => '<p>'.str_repeat($title.'. Detailed analysis and actionable insights for support teams. ', 10).'</p>',
+                'excerpt' => 'Insights on '.$title,
                 'featured_image' => null,
                 'category' => ['Industry', 'Product', 'Tutorial', 'Case Study'][rand(0, 3)],
                 'status' => 'published',
@@ -252,13 +260,13 @@ class DemoDataSeeder extends Seeder
             $status = $statuses[array_rand($statuses)];
             $closedAt = in_array($status, ['resolved', 'closed']) ? $createdAt->copy()->addHours(rand(1, 72)) : null;
             $rows[] = [
-                'uid' => 'TKT-' . strtoupper(Str::random(8)),
+                'uid' => 'TKT-'.strtoupper(Str::random(8)),
                 'user_id' => $customerIds[array_rand($customerIds)],
                 'assigned_to' => rand(0, 9) < 7 ? $agentIds[array_rand($agentIds)] : null,
                 'department_id' => $departments[array_rand($departments)],
                 'category_id' => $categories[array_rand($categories)],
                 'subject' => $subjects[array_rand($subjects)],
-                'body' => 'Detailed description of the issue. ' . Str::random(80),
+                'body' => 'Detailed description of the issue. '.Str::random(80),
                 'priority' => $priorities[array_rand($priorities)],
                 'status' => $status,
                 'source' => $sources[array_rand($sources)],
@@ -276,7 +284,9 @@ class DemoDataSeeder extends Seeder
                 $rows = [];
             }
         }
-        if ($rows) Ticket::insert($rows);
+        if ($rows) {
+            Ticket::insert($rows);
+        }
 
         return Ticket::where('uid', 'like', 'TKT-%')->pluck('id')->all();
     }
@@ -292,7 +302,7 @@ class DemoDataSeeder extends Seeder
             $rows[] = [
                 'ticket_id' => $sampleTickets[array_rand($sampleTickets)],
                 'user_id' => $userId,
-                'body' => 'Reply: ' . Str::random(60),
+                'body' => 'Reply: '.Str::random(60),
                 'is_internal' => $isAgent && rand(0, 9) === 0,
                 'source' => 'web',
                 'created_at' => $now->copy()->subDays(rand(0, 60)),
@@ -303,7 +313,9 @@ class DemoDataSeeder extends Seeder
                 $rows = [];
             }
         }
-        if ($rows) TicketReply::insert($rows);
+        if ($rows) {
+            TicketReply::insert($rows);
+        }
     }
 
     private function seedConversations(int $convN, int $msgN, array $customerIds, array $agentIds): void
@@ -330,7 +342,7 @@ class DemoDataSeeder extends Seeder
             $msgRows[] = [
                 'conversation_id' => $convIds[array_rand($convIds)],
                 'user_id' => $userId,
-                'body' => 'Message: ' . Str::random(50),
+                'body' => 'Message: '.Str::random(50),
                 'type' => 'text',
                 'metadata' => null,
                 'read_at' => rand(0, 9) < 7 ? $now : null,
@@ -342,18 +354,20 @@ class DemoDataSeeder extends Seeder
                 $msgRows = [];
             }
         }
-        if ($msgRows) ConversationMessage::insert($msgRows);
+        if ($msgRows) {
+            ConversationMessage::insert($msgRows);
+        }
     }
 
     private function summary(): void
     {
         $this->command->info('==== Summary ====');
-        $this->command->info('Users: ' . User::count() . ' (customers: ' . User::whereHas('roles', fn($q) => $q->where('name', 'customer'))->count() . ', agents: ' . User::whereHas('roles', fn($q) => $q->where('name', 'agent'))->count() . ')');
-        $this->command->info('Tickets: ' . Ticket::count());
-        $this->command->info('Ticket replies: ' . TicketReply::count());
-        $this->command->info('Conversations: ' . Conversation::count() . ' (messages: ' . ConversationMessage::count() . ')');
-        $this->command->info('Knowledge articles: ' . KnowledgeArticle::count());
-        $this->command->info('Posts: ' . Post::count());
-        $this->command->info('Services: ' . Service::count());
+        $this->command->info('Users: '.User::count().' (customers: '.User::whereHas('roles', fn ($q) => $q->where('name', 'customer'))->count().', agents: '.User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->count().')');
+        $this->command->info('Tickets: '.Ticket::count());
+        $this->command->info('Ticket replies: '.TicketReply::count());
+        $this->command->info('Conversations: '.Conversation::count().' (messages: '.ConversationMessage::count().')');
+        $this->command->info('Knowledge articles: '.KnowledgeArticle::count());
+        $this->command->info('Posts: '.Post::count());
+        $this->command->info('Services: '.Service::count());
     }
 }

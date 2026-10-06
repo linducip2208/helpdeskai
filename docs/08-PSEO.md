@@ -131,7 +131,7 @@ public function best(int $year)
         abort(404);
     }
 
-    return Inertia::render('Seo/Best', [
+    return view('seo.best-helpdesk', [
         'year' => $year,
         'services' => $services,
         'seoTitle' => "Best Help Desk Software in {$year}",
@@ -431,7 +431,7 @@ This controller implements all 3 patterns with:
 
 ## View Templates
 
-### Best Page (`resources/js/Pages/Seo/Best.vue`)
+### Best Page (`resources/views/seo/best-helpdesk.blade.php`)
 - Hero with year heading
 - Intro paragraph
 - Ranked product cards (1-10)
@@ -439,7 +439,7 @@ This controller implements all 3 patterns with:
 - FAQ accordion section
 - CTA to all services
 
-### Compare Page (`resources/js/Pages/Seo/Compare.vue`)
+### Compare Page (`resources/views/seo/compare.blade.php`)
 - Head-to-head hero
 - Side-by-side comparison table
 - Pros/Cons column layout
@@ -447,7 +447,7 @@ This controller implements all 3 patterns with:
 - Feature checklist
 - Verdict section
 
-### Alternatives Page (`resources/js/Pages/Seo/Alternatives.vue`)
+### Alternatives Page (`resources/views/seo/alternatives.blade.php`)
 - Primary product card (top)
 - Alternatives grid (8 cards)
 - Why consider alternatives section

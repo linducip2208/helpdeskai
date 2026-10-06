@@ -35,6 +35,6 @@ class TicketReply extends Model
 
     public function attachments(): HasMany
     {
-        return $this->hasMany(TicketAttachment::class);
+        return $this->hasMany(TicketAttachment::class, 'reply_id');
     }
 }

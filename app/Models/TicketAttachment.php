@@ -13,6 +13,7 @@ class TicketAttachment extends Model
     {
         return [
             'size' => 'integer',
+            'is_internal' => 'boolean',
         ];
     }
 

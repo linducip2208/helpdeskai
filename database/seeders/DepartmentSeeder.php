@@ -12,7 +12,7 @@ class DepartmentSeeder extends Seeder
         $departments = ['Technical Support', 'Billing', 'Sales', 'General Inquiry'];
 
         foreach ($departments as $name) {
-                Department::firstOrCreate(
+            Department::firstOrCreate(
                 ['name' => $name],
                 [
                     'description' => "{$name} department",

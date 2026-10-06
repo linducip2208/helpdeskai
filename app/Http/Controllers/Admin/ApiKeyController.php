@@ -29,7 +29,8 @@ class ApiKeyController extends Controller
         ApiKey::create([
             'user_id' => $request->user()->id,
             'name' => $validated['name'],
-            'key' => $plain,
+            'permissions' => $validated['permissions'] ?? 'read',
+            'key' => hash('sha256', $plain),
         ]);
 
         return redirect()->back()->with([
@@ -40,13 +41,15 @@ class ApiKeyController extends Controller
 
     public function toggle(ApiKey $apiKey): RedirectResponse
     {
-        $apiKey->update(['is_active' => !$apiKey->is_active]);
+        $apiKey->update(['is_active' => ! $apiKey->is_active]);
+
         return redirect()->back()->with('success', 'API key updated.');
     }
 
     public function destroy(ApiKey $apiKey): RedirectResponse
     {
         $apiKey->delete();
+
         return redirect()->back()->with('success', 'API key deleted.');
     }
 }

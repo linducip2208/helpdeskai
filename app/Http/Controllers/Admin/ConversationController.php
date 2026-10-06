@@ -16,8 +16,8 @@ class ConversationController extends Controller
     public function index(Request $request): View
     {
         $conversations = Conversation::with(['user', 'assignedTo'])
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->search, fn($q) => $q->whereHas('user', fn($q) => $q->where('name', 'like', "%{$request->search}%")))
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->search, fn ($q) => $q->whereHas('user', fn ($q) => $q->where('name', 'like', "%{$request->search}%")))
             ->withCount('messages')
             ->latest('last_message_at')
             ->paginate($request->per_page ?? 25)
@@ -35,7 +35,7 @@ class ConversationController extends Controller
 
         return view('admin.conversations.show', [
             'conversation' => $conversation,
-            'agents' => User::whereHas('roles', fn($q) => $q->where('name', 'agent'))->get(['id', 'name']),
+            'agents' => User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->get(['id', 'name']),
         ]);
     }
 
@@ -56,7 +56,7 @@ class ConversationController extends Controller
             'status' => 'open',
         ]);
 
-        ActivityLogService::log(auth()->id(), 'conversation_reply', ConversationMessage::class, $message->id, "Reply to conversation #{$conversation->id}");
+        ActivityLogService::logCustom(auth()->id(), 'conversation_reply', ConversationMessage::class, $message->id, "Reply to conversation #{$conversation->id}");
 
         return back()->with('success', 'Reply sent.');
     }
@@ -64,7 +64,7 @@ class ConversationController extends Controller
     public function create(): View
     {
         return view('admin.conversations.create', [
-            'customers' => User::whereHas('roles', fn($q) => $q->where('name', 'customer'))->get(['id', 'name']),
+            'customers' => User::whereHas('roles', fn ($q) => $q->where('name', 'customer'))->get(['id', 'name']),
         ]);
     }
 
@@ -89,7 +89,7 @@ class ConversationController extends Controller
             'type' => 'customer',
         ]);
 
-        ActivityLogService::log(auth()->id(), 'conversation_create', Conversation::class, $conversation->id, "Conversation #{$conversation->id}");
+        ActivityLogService::logCustom(auth()->id(), 'conversation_create', Conversation::class, $conversation->id, "Conversation #{$conversation->id}");
 
         return redirect()->route('admin.conversations.show', $conversation)->with('success', 'Conversation created.');
     }
@@ -98,7 +98,7 @@ class ConversationController extends Controller
     {
         $id = $conversation->id;
         $conversation->delete();
-        ActivityLogService::log(auth()->id(), 'conversation_delete', Conversation::class, $id, "Conversation #{$id}");
+        ActivityLogService::logCustom(auth()->id(), 'conversation_delete', Conversation::class, $id, "Conversation #{$id}");
 
         return redirect()->route('admin.conversations.index')->with('success', 'Conversation deleted.');
     }

@@ -1,15 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Compare Help Desk Software') }}
-        </h2>
+        <h2 class="page-title">{{ __('Compare Help Desk Software') }}</h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-8">
-                    <!-- JSON-LD Schema -->
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-body">
                     <script type="application/ld+json">
                     {
                         "@@context": "https://schema.org",
@@ -25,36 +22,35 @@
                     }
                     </script>
 
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{{ $itemA->name ?? 'Product A' }} vs {{ $itemB->name ?? 'Product B' }}</h1>
-                    <p class="text-gray-500 dark:text-gray-400 mb-8">A detailed head-to-head comparison to help you choose the right help desk solution.</p>
+                    <h1 class="card-title fs-2">{{ $itemA->name ?? 'Product A' }} vs {{ $itemB->name ?? 'Product B' }}</h1>
+                    <p class="text-secondary mb-3">A detailed head-to-head comparison to help you choose the right help desk solution.</p>
 
-                    <!-- Comparison Table -->
-                    <div class="overflow-x-auto mb-8">
-                        <table class="w-full border-collapse">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-vcenter card-table">
                             <thead>
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-750 rounded-tl-xl">Feature</th>
-                                    <th class="px-6 py-3 text-center text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-gray-50 dark:bg-gray-750">{{ $itemA->name ?? 'Product A' }}</th>
-                                    <th class="px-6 py-3 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-gray-50 dark:bg-gray-750 rounded-tr-xl">{{ $itemB->name ?? 'Product B' }}</th>
+                                    <th>Feature</th>
+                                    <th class="text-center">{{ $itemA->name ?? 'Product A' }}</th>
+                                    <th class="text-center">{{ $itemB->name ?? 'Product B' }}</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tbody>
                                 @php $features = ['Ticket Management', 'AI Automation', 'Live Chat', 'Reporting', 'Multi-Channel', 'SLA Management', 'Knowledge Base', 'API Access', 'Custom Branding']; @endphp
-                                @foreach($features as $feature)
+                                @foreach($features as $i => $feature)
                                 <tr>
-                                    <td class="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{{ $feature }}</td>
-                                    <td class="px-6 py-3 text-center">
-                                        @if(rand(0,1))
-                                        <svg class="w-5 h-5 mx-auto text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <td>{{ $feature }}</td>
+                                    <td class="text-center">
+                                        @if($i % 2 === 0)
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success"><path d="M5 13l4 4L19 7"/></svg>
                                         @else
-                                        <svg class="w-5 h-5 mx-auto text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger"><path d="M6 18L18 6M6 6l12 12"/></svg>
                                         @endif
                                     </td>
-                                    <td class="px-6 py-3 text-center">
-                                        @if(rand(0,1))
-                                        <svg class="w-5 h-5 mx-auto text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <td class="text-center">
+                                        @if($i % 3 !== 2)
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success"><path d="M5 13l4 4L19 7"/></svg>
                                         @else
-                                        <svg class="w-5 h-5 mx-auto text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger"><path d="M6 18L18 6M6 6l12 12"/></svg>
                                         @endif
                                     </td>
                                 </tr>
@@ -63,7 +59,7 @@
                         </table>
                     </div>
 
-                    <div class="prose prose-sm max-w-none text-gray-600 dark:text-gray-400">
+                    <div class="text-secondary">
                         <h3>Overview</h3>
                         <p>Both {{ $itemA->name ?? 'Product A' }} and {{ $itemB->name ?? 'Product B' }} offer robust help desk solutions. Your choice depends on specific requirements like team size, budget, and integration needs.</p>
 

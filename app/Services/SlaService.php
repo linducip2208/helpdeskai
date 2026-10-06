@@ -26,14 +26,14 @@ class SlaService
 
     public function checkAllTickets(): void
     {
-        $tickets = Ticket::whereNotIn('status', [
+        Ticket::whereNotIn('status', [
             TicketStatus::Resolved->value,
             TicketStatus::Closed->value,
-        ])->get();
-
-        foreach ($tickets as $ticket) {
-            $this->evaluateTicket($ticket);
-        }
+        ])->chunkById(200, function ($tickets) {
+            foreach ($tickets as $ticket) {
+                $this->evaluateTicket($ticket);
+            }
+        });
     }
 
     public function sendBreachNotification(Ticket $ticket): void
@@ -62,15 +62,15 @@ class SlaService
 
         $parts = [];
         if ($remaining->d > 0) {
-            $parts[] = $remaining->d . 'd';
+            $parts[] = $remaining->d.'d';
         }
         if ($remaining->h > 0) {
-            $parts[] = $remaining->h . 'h';
+            $parts[] = $remaining->h.'h';
         }
         if ($remaining->i > 0) {
-            $parts[] = $remaining->i . 'm';
+            $parts[] = $remaining->i.'m';
         }
 
-        return $parts ? implode(' ', $parts) . ' remaining' : 'Imminent';
+        return $parts ? implode(' ', $parts).' remaining' : 'Imminent';
     }
 }

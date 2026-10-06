@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Department;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CategorySeeder extends Seeder
 {
@@ -28,7 +29,7 @@ class CategorySeeder extends Seeder
                 Category::firstOrCreate(
                     ['name' => $name, 'department_id' => $department->id],
                     [
-                        'slug' => \Illuminate\Support\Str::slug($name),
+                        'slug' => Str::slug($name),
                         'is_active' => true,
                     ]
                 );

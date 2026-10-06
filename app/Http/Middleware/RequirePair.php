@@ -23,10 +23,11 @@ class RequirePair
         }
 
         $domain = strtolower($request->getHost());
-        $data   = $this->client->verify($domain);
+        $data = $this->client->verify($domain);
 
         if ($data) {
             $request->attributes->set('license', $data);
+
             return $next($request);
         }
 
@@ -41,24 +42,38 @@ class RequirePair
             return true;
         }
 
-        $path = '/' . ltrim($request->path(), '/');
+        $path = '/'.ltrim($request->path(), '/');
 
         // Always allow the wizard itself
-        if (str_starts_with($path, '/__pair')) return true;
+        if (str_starts_with($path, '/__pair')) {
+            return true;
+        }
 
         // Health check / debug
-        if ($path === '/up') return true;
-        if (str_starts_with($path, '/_debugbar')) return true;
+        if ($path === '/up') {
+            return true;
+        }
+        if (str_starts_with($path, '/_debugbar')) {
+            return true;
+        }
 
         // Public SEO / PWA assets must stay reachable even pre-pairing
-        if ($path === '/sitemap.xml' || $path === '/robots.txt') return true;
-        if ($path === '/manifest.json' || $path === '/sw.js' || $path === '/offline.html') return true;
-        if (str_starts_with($path, '/icons/')) return true;
+        if ($path === '/sitemap.xml' || $path === '/robots.txt') {
+            return true;
+        }
+        if ($path === '/manifest.json' || $path === '/sw.js' || $path === '/offline.html') {
+            return true;
+        }
+        if (str_starts_with($path, '/icons/')) {
+            return true;
+        }
 
         // Localhost dev bypass
         if (config('license.dev_bypass') && app()->environment('local')) {
             $host = $request->getHost();
-            if ($this->isDevHost($host)) return true;
+            if ($this->isDevHost($host)) {
+                return true;
+            }
         }
 
         return false;

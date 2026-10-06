@@ -2,46 +2,48 @@
 @section('title', 'Edit Service')
 @section('content')
 
-<div class="max-w-3xl mx-auto space-y-6">
-    <div>
-        <a href="{{ route('admin.services.index') }}" class="text-sm text-indigo-600 hover:text-indigo-700">&larr; Back to Services</a>
-        <h2 class="text-2xl font-bold text-slate-900 mt-1">Edit Service</h2>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <form action="{{ route('admin.services.update', $service ?? 0) }}" method="POST">
-            @csrf @method('PUT')
-            <div class="space-y-5">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-slate-700 mb-1">Service Name</label>
-                    <input type="text" name="name" id="name" value="{{ old('name', $service->name ?? '') }}" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
-                </div>
-                <div>
-                    <label for="description" class="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                    <textarea name="description" id="description" rows="4" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">{{ old('description', $service->description ?? '') }}</textarea>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                        <label for="price" class="block text-sm font-medium text-slate-700 mb-1">Price</label>
-                        <input type="number" name="price" id="price" step="0.01" value="{{ old('price', $service->price ?? '') }}" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+        <a href="{{ route('admin.services.index') }}" class="btn btn-link px-0">&larr; Back to Services</a>
+        <div class="card">
+            <div class="card-body">
+                <form action="{{ route('admin.services.update', $service ?? 0) }}" method="POST">
+                    @csrf @method('PUT')
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Service Name</label>
+                        <input type="text" name="name" id="name" value="{{ old('name', $service->name ?? '') }}" class="form-control" required>
                     </div>
-                    <div>
-                        <label for="duration" class="block text-sm font-medium text-slate-700 mb-1">Duration</label>
-                        <input type="text" name="duration" id="duration" value="{{ old('duration', $service->duration ?? '') }}" class="w-full rounded-lg border-gray-200 text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea name="description" id="description" rows="4" class="form-control">{{ old('description', $service->description ?? '') }}</textarea>
                     </div>
-                </div>
-                <div class="flex items-center">
-                    <label class="inline-flex items-center text-sm text-slate-700">
-                        <input type="checkbox" name="is_active" value="1" {{ ($service->is_active ?? true) ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2">
-                        Active
-                    </label>
-                </div>
-                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-                    <a href="{{ route('admin.services.index') }}" class="px-6 py-2.5 border border-gray-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-gray-50">Cancel</a>
-                    <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Update Service</button>
-                </div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Price</label>
+                                <input type="number" name="price" id="price" step="0.01" value="{{ old('price', $service->price ?? '') }}" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="duration" class="form-label">Duration</label>
+                                <input type="text" name="duration" id="duration" value="{{ old('duration', $service->duration ?? '') }}" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-check form-switch">
+                            <input type="checkbox" name="is_active" value="1" {{ ($service->is_active ?? true) ? 'checked' : '' }} class="form-check-input">
+                            <span class="form-check-label">Active</span>
+                        </label>
+                    </div>
+                    <div class="form-footer d-flex justify-content-end gap-2">
+                        <a href="{{ route('admin.services.index') }}" class="btn">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Service</button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
