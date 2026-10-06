@@ -69,6 +69,7 @@ class UserController extends Controller
 
         $user = User::create($validated);
         $user->roles()->sync($roles);
+        $this->syncRoleColumn($user);
 
         ActivityLogService::logCustom(auth()->id(), 'user_create', User::class, $user->id, $user->name);
 
@@ -115,10 +116,23 @@ class UserController extends Controller
 
         $user->update($validated);
         $user->roles()->sync($roles);
+        $this->syncRoleColumn($user);
 
         ActivityLogService::logCustom(auth()->id(), 'user_update', User::class, $user->id, $user->name);
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');
+    }
+
+    /**
+     * Keep the legacy `role` string column in sync with the primary Spatie role.
+     */
+    protected function syncRoleColumn(User $user): void
+    {
+        $primary = $user->roles()->orderBy('name')->first();
+
+        $user->forceFill([
+            'role' => $primary?->name ?? 'customer',
+        ])->saveQuietly();
     }
 
     public function impersonate(User $user): RedirectResponse

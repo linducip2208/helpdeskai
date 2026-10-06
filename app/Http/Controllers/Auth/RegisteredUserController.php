@@ -42,6 +42,12 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        if ($customerRole = \Spatie\Permission\Models\Role::where('name', 'customer')->first()) {
+            $user->assignRole($customerRole);
+        }
+
+        $user->forceFill(['role' => 'customer'])->saveQuietly();
+
         event(new Registered($user));
 
         Auth::login($user);

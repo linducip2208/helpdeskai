@@ -3,50 +3,59 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Ticket;
+use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AnalyticsController extends Controller
 {
+    public function __construct(protected ReportService $reports) {}
+
     public function index(Request $request): View
     {
-        $range = $request->get('range', '30days');
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+
+        $from = $validated['from'] ?? null;
+        $to = $validated['to'] ?? null;
+
+        [$normFrom, $normTo] = $this->reports->normalizeRange($from, $to);
 
         return view('admin.analytics.index', [
-            'stats' => [
-                'total_tickets' => Ticket::count(),
-                'open_tickets' => Ticket::whereIn('status', ['open', 'in_progress'])->count(),
-                'resolved_today' => Ticket::whereDate('closed_at', today())->count(),
-                'avg_response_hours' => 2.5,
-                'sla_compliance' => 92,
-                'csat_avg' => 4.3,
-            ],
-            'range' => $range,
+            'filters' => ['from' => substr($normFrom, 0, 10), 'to' => substr($normTo, 0, 10)],
+            'overview' => $this->reports->overview($from, $to),
+            'byStatus' => $this->reports->byStatus($from, $to),
+            'byPriority' => $this->reports->byPriority($from, $to),
+            'byDepartment' => $this->reports->byDepartment($from, $to),
+            'byCategory' => $this->reports->byCategory($from, $to),
+            'agentPerformance' => $this->reports->agentPerformance($from, $to),
+            'trends' => $this->reports->trends($from, $to),
         ]);
     }
 
     public function chartData(Request $request): JsonResponse
     {
-        $days = $request->get('days', 30);
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'days' => 'nullable|integer|min:1|max:93',
+        ]);
 
-        $tickets = Ticket::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->where('created_at', '>=', now()->subDays($days))
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        $from = $validated['from'] ?? null;
+        $to = $validated['to'] ?? null;
 
-        $resolved = Ticket::selectRaw('DATE(closed_at) as date, COUNT(*) as count')
-            ->where('closed_at', '>=', now()->subDays($days))
-            ->whereNotNull('closed_at')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        if (! $from && ! $to && isset($validated['days'])) {
+            $to = now()->toDateString();
+            $from = now()->subDays($validated['days'] - 1)->toDateString();
+        }
 
         return response()->json([
-            'created' => $tickets,
-            'resolved' => $resolved,
+            'success' => true,
+            'data' => $this->reports->trends($from, $to),
+            'message' => 'Chart data retrieved.',
         ]);
     }
 }

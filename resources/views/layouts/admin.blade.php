@@ -57,6 +57,8 @@
         'Reports'    => [
             ['route' => 'admin.export.tickets', 'label' => __('Export Tickets CSV'), 'icon' => 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4', 'external' => true],
             ['route' => 'admin.export.agents',  'label' => __('Export Agents CSV'),  'icon' => 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4', 'external' => true],
+            ['route' => 'admin.export.sla',     'label' => __('Export SLA CSV'),     'icon' => 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4', 'external' => true],
+            ['route' => 'admin.export.ai-usage','label' => __('Export AI Usage CSV'),'icon' => 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4', 'external' => true],
         ],
     ];
 

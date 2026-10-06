@@ -152,6 +152,8 @@ Route::middleware(['auth', 'verified', '2fa', 'role:admin'])->prefix('admin')->n
 
     Route::get('/export/tickets.csv', [ExportController::class, 'tickets'])->name('export.tickets');
     Route::get('/export/agents.csv', [ExportController::class, 'agents'])->name('export.agents');
+    Route::get('/export/sla.csv', [ExportController::class, 'sla'])->name('export.sla');
+    Route::get('/export/ai-usage.csv', [ExportController::class, 'aiUsage'])->name('export.ai-usage');
 
     Route::get('/ai-usage-logs', [AiUsageLogController::class, 'index'])->name('ai-usage-logs.index');
 

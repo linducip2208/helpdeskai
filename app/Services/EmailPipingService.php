@@ -70,7 +70,10 @@ class EmailPipingService
                 'email' => $fromEmail,
                 'password' => bcrypt(Str::random(32)),
             ]);
-            $user->assignRole('customer');
+            if (\Spatie\Permission\Models\Role::where('name', 'customer')->exists()) {
+                $user->assignRole('customer');
+            }
+            $user->forceFill(['role' => 'customer'])->saveQuietly();
         }
 
         if (preg_match('/\[(TKT-[A-Z0-9]+)\]/', $subject, $matches)) {
