@@ -17,11 +17,11 @@ class AppNotificationService
             'type' => $type,
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
-            'data' => json_encode(array_merge([
+            'data' => array_merge([
                 'title' => $title,
                 'body' => $body,
                 'url' => $url,
-            ], $extra)),
+            ], $extra),
         ]);
 
         $this->pushIfSubscribed($user, $title, $body, $url);

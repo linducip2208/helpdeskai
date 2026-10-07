@@ -93,6 +93,24 @@
                         <label for="extra_headers" class="form-label">Extra Headers (JSON)</label>
                         <textarea name="extra_headers" id="extra_headers" rows="2" class="form-control">{{ old('extra_headers', is_array($provider->extra_headers) ? json_encode($provider->extra_headers) : '') }}</textarea>
                     </div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label for="priority" class="form-label">Priority (failover order)</label>
+                            <input type="number" name="priority" id="priority" min="0" max="1000" value="{{ old('priority', $provider->priority ?? 0) }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="timeout_seconds" class="form-label">Timeout (sec)</label>
+                            <input type="number" name="timeout_seconds" id="timeout_seconds" min="5" max="300" value="{{ old('timeout_seconds', $provider->timeout_seconds ?? 60) }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="max_retries" class="form-label">Attempts</label>
+                            <input type="number" name="max_retries" id="max_retries" min="1" max="5" value="{{ old('max_retries', $provider->max_retries ?? 2) }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="organization" class="form-label">Organization</label>
+                            <input type="text" name="organization" id="organization" value="{{ old('organization', $provider->organization ?? '') }}" class="form-control">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-check form-switch">
                             <input type="checkbox" name="is_active" value="1" {{ $provider->is_active ? 'checked' : '' }} class="form-check-input">
@@ -114,18 +132,78 @@
             </div>
             <div class="list-group list-group-flush">
                 @foreach($provider->models as $model)
-                    <div class="list-group-item d-flex align-items-center justify-content-between">
-                        <span><code>{{ $model->model_name }}</code></span>
-                        @if($model->is_active)
-                            <span class="badge bg-green-lt">active</span>
-                        @else
-                            <span class="badge bg-secondary">inactive</span>
-                        @endif
+                    <div class="list-group-item d-flex align-items-center justify-content-between gap-2">
+                        <span>
+                            <code>{{ $model->model_id }}</code>
+                            <span class="text-muted small">{{ $model->display_name }} · {{ $model->capability }}</span>
+                            @if($model->cost_input_per_1m || $model->cost_output_per_1m)
+                            <span class="text-muted small">· ${{ $model->cost_input_per_1m }}/1M in, ${{ $model->cost_output_per_1m }}/1M out</span>
+                            @endif
+                        </span>
+                        <span class="d-flex align-items-center gap-2">
+                            @if($model->is_active)
+                                <span class="badge bg-green-lt">active</span>
+                            @else
+                                <span class="badge bg-secondary">inactive</span>
+                            @endif
+                            <form action="{{ route('admin.ai-providers.models.destroy', [$provider, $model]) }}" method="POST" onsubmit="return confirm('Remove this model?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                            </form>
+                        </span>
                     </div>
                 @endforeach
             </div>
         </div>
         @endif
+
+        <div class="card mt-3">
+            <div class="card-header"><h3 class="card-title">Add Model</h3></div>
+            <div class="card-body">
+                <form action="{{ route('admin.ai-providers.models.store', $provider) }}" method="POST">
+                    @csrf
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label" for="model_id">Model ID</label>
+                            <input type="text" name="model_id" id="model_id" class="form-control" placeholder="gpt-4o-mini" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="display_name">Display name</label>
+                            <input type="text" name="display_name" id="display_name" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="capability">Capability</label>
+                            <select name="capability" id="capability" class="form-select">
+                                @foreach(['chat', 'reasoning', 'embedding', 'image', 'audio', 'vision'] as $cap)
+                                <option value="{{ $cap }}">{{ ucfirst($cap) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="cost_input_per_1m">Cost $/1M input</label>
+                            <input type="number" step="0.0001" min="0" name="cost_input_per_1m" id="cost_input_per_1m" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="cost_output_per_1m">Cost $/1M output</label>
+                            <input type="number" step="0.0001" min="0" name="cost_output_per_1m" id="cost_output_per_1m" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="context_window">Context window</label>
+                            <input type="number" min="0" name="context_window" id="context_window" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="max_output_tokens">Max output tokens</label>
+                            <input type="number" min="0" name="max_output_tokens" id="max_output_tokens" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="model_priority">Priority</label>
+                            <input type="number" min="0" max="1000" name="priority" id="model_priority" value="0" class="form-control">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Add Model</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\LicenseClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,6 +50,8 @@ class PairController extends Controller
         }
 
         session()->flash('pair_success', $result['data']);
+
+        ActivityLogService::logCustom(null, 'license_activate', User::class, null, $domain);
 
         return redirect('/__pair/success');
     }

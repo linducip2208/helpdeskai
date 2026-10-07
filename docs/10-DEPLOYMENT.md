@@ -184,6 +184,25 @@ server {
 
 ## Queue Worker Setup
 
+Database queue (`QUEUE_CONNECTION=database`) adalah path yang didukung default — tidak butuh layanan tambahan selain migrasi `jobs` yang sudah ada.
+
+### Redis (opsional)
+
+Untuk traffic tinggi, ganti driver ke Redis:
+
+```env
+QUEUE_CONNECTION=redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=null
+```
+
+Lalu jalankan worker yang sama (`php artisan queue:work`). Tidak ada perubahan kode yang diperlukan — semua job (`DeliverWebhook`, `ClassifyTicketWithAi`, `AnalyzeTicketSentiment`, `SendWebPushNotification`, mail) mengimplementasikan `ShouldQueue` dan agnostik terhadap driver.
+
+### Horizon (opsional, tidak diinstal default)
+
+Horizon **tidak** diinstal di repo ini karena membutuhkan Redis. Database queue + Supervisor di bawah adalah setup yang didukung. Bila ingin Horizon: install `laravel/horizon` secara manual, set `QUEUE_CONNECTION=redis`, dan ikuti dokumentasi Horizon resmi — di luar cakupan panduan ini.
+
 ### Supervisor Configuration
 Create `/etc/supervisor/conf.d/helpdeskai-worker.conf`:
 ```ini
@@ -264,14 +283,18 @@ Add to crontab (`crontab -e` for www-data user):
 ```cron
 * * * * * cd /var/www/helpdeskai && php artisan schedule:run >> /dev/null 2>&1
 ```
+### Scheduled Commands (aktual, dari `routes/console.php`)
 
-### Scheduled Commands
 ```
-# Daily: expire overdue SLA
-# Daily: send SLA breach notifications
-# Weekly: prune old notifications (30+ days)
-# Monthly: archive old activity logs
+sla:check            → hourly                (evaluasi breach SLA + notifikasi assignee)
+tickets:reminders    → daily 08:00           (pengingat deadline / breach)
+tickets:autoclose    → daily 03:00           (tutup tiket resolved yang stagnan)
+maintenance:cleanup  → daily 04:00           (prune AI logs, webhook deliveries, notifikasi, sesi, file temp)
+db:backup            → daily 02:00           (mysqldump ke storage/app/backups, retensi 14)
+seo:indexnow         → daily 02:45           (submit URL batch ke IndexNow)
 ```
+
+Semua memakai `->withoutOverlapping()`.
 
 ---
 
@@ -459,25 +482,24 @@ opcache.fast_shutdown=1
 ### Assets
 - All JS/CSS built with Vite (minified + tree-shaken)
 - Static asset caching headers set in Nginx (1 year for hashed assets)
-- Use CDN for assets (Cloudflare, BunnyCDN) in high-traffic scenarios
+- No CDN for build/runtime assets — the UI is served fully offline from `public/build` (Tabler/Inter/ApexCharts bundled via npm). For high-traffic scenarios, put a reverse-proxy cache (e.g. Cloudflare in front of Nginx) instead of rewriting asset URLs to a CDN.
 
 ---
 
 ## Backup Strategy
 
-### Database Backup
+### Cara kerja (`App\Console\Commands\BackupDatabase`)
+
+Command `db:backup` (terjadwal daily 02:00, lihat `routes/console.php`):
+
+- Hanya berjalan bila `config('database.default') === 'mysql'` — koneksi lain (sqlite) di-skip dengan warning (bukan error).
+- Menjalankan `mysqldump` (binary dari env `MYSQLDUMP_PATH`, default `mysqldump`) dengan flags `--single-transaction --quick --skip-lock-tables`, timeout 600 dtk.
+- Menulis ke `storage/app/backups/backup-Y-m-d_His.sql`, lalu prune otomatis (`--keep=14` default, hanya N file terbaru dipertahankan).
+
 ```bash
-# Daily MySQL dump
-mysqldump -u helpdeskai_user -p helpdeskai > /backups/helpdeskai_$(date +%Y%m%d).sql
-
-# Compress
-gzip /backups/helpdeskai_$(date +%Y%m%d).sql
-```
-
-### Automated via Cron
-```cron
-0 2 * * * mysqldump -u helpdeskai_user -p'password' helpdeskai | gzip > /backups/helpdeskai_$(date +\%Y\%m\%d).sql.gz
-0 3 * * * find /backups/ -name "*.sql.gz" -mtime +30 -delete
+# Manual
+php artisan db:backup --keep=14
+ls storage/app/backups/
 ```
 
 ### Files Backup
@@ -494,10 +516,10 @@ cp /var/www/helpdeskai/.env /backups/env_$(date +%Y%m%d)
 - **Files:** S3 sync for `storage/app/public/`
 - **Config:** Git repository (`.env` excluded, stored in password manager)
 
-### Restore Procedure
+### Restore Procedure (sesuai cara backup di atas)
 ```bash
-# 1. Restore database
-gunzip < backup_20260504.sql.gz | mysql -u helpdeskai_user -p helpdeskai
+# 1. Restore database (dari file backup app — bukan .sql.gz eksternal)
+mysql -u helpdeskai_user -p helpdeskai < storage/app/backups/backup-YYYY-MM-DD_HHMMSS.sql
 
 # 2. Restore files
 rsync -avz /backups/files/ /var/www/helpdeskai/storage/app/public/
@@ -516,25 +538,39 @@ sudo supervisorctl restart helpdeskai-reverb:*
 
 ## Health Checks
 
-### Endpoint
+### Endpoints (aktual, `App\Http\Controllers\HealthController`, `routes/web.php`)
+
 ```http
 GET /health
 ```
 
-Returns:
 ```json
 {
   "status": "ok",
+  "app": "HelpDesk AI",
   "version": "1.0.0",
-  "timestamp": "2026-05-04T12:00:00Z",
+  "time": "2026-10-06T12:00:00+07:00"
+}
+```
+
+`version` dibaca dari file `VERSION` di root project (fallback `"dev"` bila file tidak ada).
+
+```http
+GET /ready
+```
+
+```json
+{
+  "ready": true,
   "checks": {
-    "database": "ok",
-    "cache": "ok",
-    "queue": "ok",
-    "reverb": "ok"
+    "database": true,
+    "cache": true,
+    "storage": true
   }
 }
 ```
+
+`ready = false` → HTTP `503` (dipakai load balancer / orchestrator untuk menahan traffic). Halaman admin **System Health** (`/admin/system-health`, permission `settings.manage`) menampilkan status yang sama di UI.
 
 ### Monitoring Integration
 - **Uptime monitoring:** UptimeRobot, Pingdom

@@ -50,7 +50,7 @@ class RequirePair
         }
 
         // Health check / debug
-        if ($path === '/up') {
+        if ($path === '/up' || $path === '/health' || $path === '/ready') {
             return true;
         }
         if (str_starts_with($path, '/_debugbar')) {

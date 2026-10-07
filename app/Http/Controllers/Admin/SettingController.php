@@ -22,7 +22,16 @@ class SettingController extends Controller
     public function update(Request $request): RedirectResponse
     {
         foreach ($request->except('_token', '_method') as $key => $value) {
+            if (! is_string($key) || ! preg_match('/^[A-Za-z0-9_.]+$/', $key)) {
+                continue;
+            }
             Setting::set($key, $value ?? '');
+        }
+
+        foreach (['notify_new_ticket', 'notify_ticket_reply', 'notify_sla_breach', 'ai.enabled', 'ai.process_ticket_content', 'ai.qa_enabled'] as $booleanKey) {
+            if (! $request->has($booleanKey)) {
+                Setting::set($booleanKey, false);
+            }
         }
 
         return redirect()->back()->with('success', 'Settings saved.');

@@ -20,7 +20,7 @@ class UserController extends Controller
             }))
             ->paginate(min((int) ($request->per_page ?? 25), 100));
 
-        $users->makeHidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes']);
+        $users->getCollection()->makeHidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes']);
 
         return response()->json([
             'success' => true,

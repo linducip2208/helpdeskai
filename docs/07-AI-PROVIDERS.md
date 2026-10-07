@@ -374,14 +374,81 @@ The admin analytics page shows:
 
 ## Budget Settings
 
-Planned: per-feature monthly budget caps stored in settings. When a feature exceeds its budget, it automatically disables with a notification to admin.
+Budgets diimplementasikan via `AiBudget` + `AiBudgetService` (bukan env). Dikelola di **Admin → AI Budgets** (`Admin\AiBudgetController`).
 
-```env
-# Planned (not yet implemented)
-AI_BUDGET_CLASSIFY=5.00     # $5/month for classification
-AI_BUDGET_SUGGEST=20.00     # $20/month for suggestions
-AI_BUDGET_SENTIMENT=2.00    # $2/month for sentiment
+| Dimensi | Nilai |
+|---|---|
+| Scope (`AiBudget::SCOPES`) | `global`, `provider` (scope_id = provider id), `feature` (scope_id = feature key) |
+| Periode (`AiBudget::PERIODS`) | `daily`, `monthly` |
+| Limit | `limit_usd` (float), `is_active` toggle |
+
+`AiService::dispatch()` memanggil `AiBudgetService::check($featureKey, $providerId)` **sebelum** tiap percobaan provider; bila `spent >= limit_usd`, dispatch diblokir dengan error `AI budget exceeded (<label>).` dan warning di-log. Enforcement bersifat immediate (berlaku untuk dispatch berikutnya). Ringkasan spending tersedia via `AiBudgetService::summary()` dan tampil di halaman AI usage log.
+
+```php
+// Alur di AiService::dispatch() (disederhanakan)
+$budget = $this->budgets->check($featureKey, $provider->id);
+if (! $budget['allowed']) {
+    $lastError = 'AI budget exceeded ('.$budget['blocking']->label().').';
+    continue; // coba kandidat provider berikutnya
+}
 ```
+
+> Catatan: blok `AI_BUDGET_*` env di versi lama dokumen ini sudah tidak berlaku — budget kini murni DB-driven.
+
+---
+
+## Failover & async jobs
+
+### Failover prioritas (`AiService`)
+
+`dispatch($featureKey, $messages, $options)`:
+
+1. Ambil `AiFeatureConfig` + relasi provider/model; hormati kill-switch `ai.enabled` dan `ai.process_ticket_content` (lihat Privacy).
+2. Susun kandidat via `candidates()`: pasangan provider+model utama yang aktif dari config.
+3. Loop `attempt()` per kandidat; tiap attempt mencatat `AiUsageLog` (tokens, cost, latency, success/error). Gagal → lanjut ke kandidat berikutnya (`$attempts++`, `$lastError` disimpan).
+4. Semua kandidat gagal → `['error' => ..., 'attempts' => N]`; pemanggil (mis. `Api\AiController::envelope`) mengubahnya menjadi response 503 yang ramah. **Ticketing tidak pernah bergantung pada AI** — alur tiket tetap jalan (graceful degradation).
+
+### Async jobs
+
+| Job | Pemicu tipikal | Retry |
+|---|---|---|
+| `ClassifyTicketWithAi` | setelah tiket dibuat (klasifikasi latar) | queued, `backoff()` |
+| `AnalyzeTicketSentiment` | setelah balasan/tiket baru | queued, `backoff()` |
+| `DeliverWebhook` | dispatch webhook | `tries = 5`, backoff `[60, 300, 900, 3600]` |
+
+Queue default yang didukung: `database` (`QUEUE_CONNECTION=database`). Redis opsional untuk traffic tinggi (lihat `docs/10-DEPLOYMENT.md`).
+
+---
+
+## Confidence policy (tidak mengarang)
+
+Aturan yang ditegakkan kode (`TicketService`, `KnowledgeRagService`, `Api\AiController`):
+
+- `confidence` adalah float `0.0–1.0` **atau** `null`. Nilai non-numerik / di luar rentang ditolak atau di-clamp (`max(0, min(1, …))`).
+- Prompt klasifikasi/sentimen/RAG meminta JSON strict dengan `confidence` eksplisit; parse failure → error, bukan tebakan.
+- RAG: bila tidak ada artikel relevan → `['answer' => null, 'confidence' => null, 'sources' => [], 'error' => 'No relevant articles found.']`. Bila AI tidak tersedia → `error: 'AI unavailable.'`. Bila sumber tidak mencakup jawaban → `answer: null` + `'AI could not answer from the sources.'`. UI **harus** menampilkan `error`/sumber, bukan mengarang jawaban.
+
+---
+
+## Privacy settings
+
+| Setting (`settings` table / Admin → Settings) | Efek (`AiService`) |
+|---|---|
+| `ai.enabled` (boolean) | `false` → semua dispatch AI diblokir |
+| `ai.process_ticket_content` (boolean) | `false` → konten tiket tidak dikirim ke provider AI |
+| `ai_data_retention_days` (default 365) | retensi `ai_usage_logs`, di-prune oleh `maintenance:cleanup` (04:00) |
+| `webhook_retention_days` (default 90) | retensi `webhook_deliveries` |
+| `notification_retention_days` (default 180), `audit_retention_days` (default 0 = simpan) | retensi notifikasi & audit log |
+
+API key provider terenkripsi AES-256 (`Crypt`), diakses via accessor `decrypted_api_key`, tidak pernah di-log (masking `sk-...xxxx`), tidak dikembalikan di response, tidak muncul di error.
+
+---
+
+## RAG: DB-fallback + interfaces untuk vector backend
+
+- `KnowledgeRagService` menerima `VectorSearchInterface $search` (default: `DatabaseVectorSearch`).
+- `Rag\DatabaseVectorSearch`: **keyword search DB** yang mengimplementasikan `VectorSearchInterface` — fallback yang selalu jalan tanpa infrastruktur vektor. Komentar kode menandai titik drop-in: bind backend vektor asli (pgvector, Meilisearch, Pinecone, …) ke `VectorSearchInterface` dan model embedding ke `Rag\EmbeddingProviderInterface` (`embed(): array<float>|null`, `null` = embedding tidak tersedia → fallback keyword tetap dipakai).
+- Return shape: `{answer: ?string, confidence: ?float, sources: [{id, title, slug, score}], error?: string}`.
 
 ---
 

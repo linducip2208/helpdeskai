@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+    level: 2
+    ignoreErrors:
+        # Eloquent magic attributes on properly-typed models (covered by @property docblocks
+        # where Larastan still cannot infer through relation generics).
+        - '#Access to an undefined property (Illuminate\\Database\\Eloquent\\Model|App\\Models\\[A-Za-z]+)::\$[a-z_]+#'
+        # Method named `parent` is legal PHP and works at runtime; Larastan cannot resolve it.
+        - "#Relation 'parent' is not found#"
+        # Pivot-intersection attribute reads that work at runtime.
+        - '#object\{pivot:.+\}::\$[a-z_]+#'

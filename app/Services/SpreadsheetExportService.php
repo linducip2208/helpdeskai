@@ -12,7 +12,7 @@ class SpreadsheetExportService
      * Stream a query to XLSX in chunks.
      *
      * @param  array<int, string>  $headings
-     * @param  callable(mixed $out, callable $write): void  $writer  Receives a row-writer closure.
+     * @param  callable  $writer  Receives a row-writer closure: function (array $record): void.
      */
     public function stream(string $filename, array $headings, callable $writer): StreamedResponse
     {

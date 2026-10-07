@@ -75,9 +75,13 @@ class EmailPipingService
                 $user->assignRole('customer');
             }
             $user->forceFill(['role' => 'customer'])->saveQuietly();
+
+            app(WebhookService::class)->dispatchGeneric('customer.created', [
+                'customer' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
+            ], 'customer-'.$user->id);
         }
 
-        if (preg_match('/\[(TKT-[A-Z0-9]+)\]/', $subject, $matches)) {
+        if (preg_match('/\[([A-Z]+-[A-Z0-9]+)\]/', $subject, $matches)) {
             $ticket = Ticket::where('uid', $matches[1])->first();
 
             if ($ticket) {

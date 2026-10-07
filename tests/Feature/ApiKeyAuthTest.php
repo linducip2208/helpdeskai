@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
 use Tests\BypassesPairing;
 use Tests\TestCase;
@@ -98,5 +99,34 @@ class ApiKeyAuthTest extends TestCase
         ]);
 
         $this->withHeader('X-API-Key', $plain)->getJson('/api/tickets')->assertStatus(401);
+    }
+
+    public function test_login_issues_sanctum_token_and_me_works(): void
+    {
+        $user = User::factory()->create(['password' => bcrypt('secret123')]);
+
+        $login = $this->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'secret123',
+        ]);
+
+        $login->assertOk()->assertJsonPath('success', true);
+        $token = $login->json('data.token');
+        $this->assertNotEmpty($token);
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('data.email', $user->email);
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson('/api/logout')
+            ->assertOk();
+
+        Auth::forgetGuards();
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/me')
+            ->assertUnauthorized();
     }
 }

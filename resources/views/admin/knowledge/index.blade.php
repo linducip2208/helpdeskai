@@ -48,16 +48,35 @@
                 <tr>
                     <td>{{ $article->title }}</td>
                     <td class="text-muted">{{ $article->category->name ?? 'N/A' }}</td>
-                    <td class="text-muted">{{ $article->views ?? 0 }}</td>
+                    <td class="text-muted">{{ $article->view_count ?? 0 }}</td>
                     <td>
-                        @if($article->is_published ?? false)
+                        @if($article->status === 'published')
                             <span class="badge bg-green-lt">Published</span>
+                        @elseif($article->status === 'review')
+                            <span class="badge bg-yellow-lt">In review</span>
+                        @elseif($article->status === 'archived')
+                            <span class="badge bg-secondary">Archived</span>
                         @else
                             <span class="badge bg-secondary">Draft</span>
                         @endif
                     </td>
                     <td class="text-muted">{{ wib($article->updated_at, 'd F Y', false) }}</td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
+                        @if(in_array($article->status, ['draft', 'archived'], true))
+                        <form action="{{ route('admin.knowledge.submit-review', $article) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm">Submit review</button>
+                        </form>
+                        @elseif($article->status === 'review')
+                        <form action="{{ route('admin.knowledge.approve', $article) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                        </form>
+                        <form action="{{ route('admin.knowledge.reject', $article) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm">Reject</button>
+                        </form>
+                        @endif
                         <a href="{{ route('admin.knowledge.edit', $article) }}" class="btn btn-sm">Edit</a>
                         <form action="{{ route('admin.knowledge.destroy', $article) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete?')">
                             @csrf @method('DELETE')

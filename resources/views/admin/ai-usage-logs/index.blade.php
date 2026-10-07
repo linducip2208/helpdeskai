@@ -53,6 +53,78 @@
             </div>
         </div>
     </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Cost Today</div>
+                <div class="h2 mb-0 text-blue">${{ number_format($summary['cost_today'], 4) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Fallbacks</div>
+                <div class="h2 mb-0 text-yellow">{{ number_format($summary['fallbacks']) }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cards mb-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Provider Performance</h3></div>
+            <div class="table-responsive"><table class="table table-vcenter card-table">
+                <thead><tr><th>Provider</th><th>Requests</th><th>Success</th><th>Tokens</th><th>Cost</th><th>Avg ms</th></tr></thead>
+                <tbody>
+                    @forelse($byProvider ?? [] as $row)
+                    <tr>
+                        <td>{{ $row->provider->name ?? '—' }}</td>
+                        <td class="text-muted">{{ number_format($row->requests) }}</td>
+                        <td class="text-muted">{{ $row->requests ? round($row->succeeded / $row->requests * 100, 1) : 0 }}%</td>
+                        <td class="text-muted">{{ number_format($row->tokens) }}</td>
+                        <td class="text-muted">${{ number_format($row->cost, 4) }}</td>
+                        <td class="text-muted">{{ number_format($row->latency) }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="6"><div class="empty"><p class="empty-title">No data yet.</p></div></td></tr>
+                    @endforelse
+                </tbody>
+            </table></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">Top Models &amp; Budgets</h3></div>
+            <div class="table-responsive"><table class="table table-vcenter card-table">
+                <thead><tr><th>Model</th><th>Requests</th><th>Success</th><th>Cost</th></tr></thead>
+                <tbody>
+                    @forelse($byModel ?? [] as $row)
+                    <tr>
+                        <td class="font-monospace small">{{ $row->model->model_id ?? '—' }}</td>
+                        <td class="text-muted">{{ number_format($row->requests) }}</td>
+                        <td class="text-muted">{{ $row->requests ? round($row->succeeded / $row->requests * 100, 1) : 0 }}%</td>
+                        <td class="text-muted">${{ number_format($row->cost, 4) }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="4"><div class="empty"><p class="empty-title">No data yet.</p></div></td></tr>
+                    @endforelse
+                </tbody>
+            </table></div>
+            @if(! empty($budgets))
+            <div class="card-body border-top">
+                <div class="subheader mb-2">Budgets</div>
+                @foreach($budgets as $label => $b)
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted small">{{ $label }}</span>
+                    <span class="small">${{ number_format($b['spent'], 4) }} / ${{ number_format($b['limit'], 2) }}</span>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+    </div>
 </div>
 
 <div class="card mb-3">

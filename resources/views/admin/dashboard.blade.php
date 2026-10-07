@@ -136,6 +136,43 @@
             </div>
         </div>
 
+        <div class="row row-cards mt-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><h3 class="card-title">{{ __('SLA At Risk') }}</h3></div>
+                    <div class="list-group list-group-flush">
+                        @forelse($slaAtRisk ?? [] as $ticket)
+                        <a href="{{ route('admin.tickets.show', $ticket) }}" class="list-group-item">
+                            <div class="row align-items-center">
+                                <div class="col text-truncate"><strong>{{ $ticket->uid }}</strong> — {{ $ticket->subject }}</div>
+                                <div class="col-auto"><span class="badge bg-yellow-lt">{{ __('at risk') }}</span></div>
+                            </div>
+                        </a>
+                        @empty
+                        <div class="list-group-item text-muted">{{ __('No tickets at risk.') }}</div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><h3 class="card-title">{{ __('SLA Breached') }}</h3></div>
+                    <div class="list-group list-group-flush">
+                        @forelse($slaBreachedTop ?? [] as $ticket)
+                        <a href="{{ route('admin.tickets.show', $ticket) }}" class="list-group-item">
+                            <div class="row align-items-center">
+                                <div class="col text-truncate"><strong>{{ $ticket->uid }}</strong> — {{ $ticket->subject }}</div>
+                                <div class="col-auto"><span class="badge bg-red-lt">{{ __('breached') }}</span></div>
+                            </div>
+                        </a>
+                        @empty
+                        <div class="list-group-item text-muted">{{ __('No breached tickets.') }}</div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card mt-3">
             <div class="card-header">
                 <h3 class="card-title">{{ __('Recent Users') }}</h3>

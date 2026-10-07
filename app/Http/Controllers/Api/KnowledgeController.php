@@ -19,17 +19,52 @@ class KnowledgeController extends Controller
                     ->orWhere('content', 'like', "%{$request->search}%");
             }))
             ->latest()
-            ->paginate($request->per_page ?? 15);
+            ->paginate(min((int) ($request->per_page ?? 15), 100));
 
-        return response()->json($articles);
+        return response()->json([
+            'success' => true,
+            'data' => $articles,
+            'message' => 'Articles retrieved.',
+        ]);
     }
 
     public function show(KnowledgeArticle $article): JsonResponse
     {
+        abort_unless(
+            $article->status === 'published'
+                || request()->user()->hasRole(['super-admin', 'admin', 'manager', 'agent']),
+            404
+        );
+
         $article->load(['category', 'user']);
         $article->increment('view_count');
 
-        return response()->json(['data' => $article]);
+        return response()->json([
+            'success' => true,
+            'data' => $article,
+            'message' => 'Article retrieved.',
+        ]);
+    }
+
+    public function search(Request $request): JsonResponse
+    {
+        $request->validate(['q' => 'required|string|min:2|max:200']);
+
+        $like = '%'.$request->q.'%';
+
+        $articles = KnowledgeArticle::with('category:id,name')
+            ->where('status', 'published')
+            ->where(function ($q) use ($like) {
+                $q->where('title', 'like', $like)->orWhere('content', 'like', $like);
+            })
+            ->latest()
+            ->paginate(min((int) ($request->per_page ?? 15), 100));
+
+        return response()->json([
+            'success' => true,
+            'data' => $articles,
+            'message' => 'Search completed.',
+        ]);
     }
 
     public function categories(): JsonResponse
@@ -39,16 +74,30 @@ class KnowledgeController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return response()->json(['data' => $categories]);
+        return response()->json([
+            'success' => true,
+            'data' => $categories,
+            'message' => 'Categories retrieved.',
+        ]);
     }
 
     public function categoryArticles(KnowledgeCategory $category): JsonResponse
     {
+        abort_unless(
+            $category->is_active
+                || request()->user()->hasRole(['super-admin', 'admin', 'manager', 'agent']),
+            404
+        );
+
         $articles = $category->articles()
             ->where('status', 'published')
             ->latest()
             ->paginate(15);
 
-        return response()->json(['data' => $articles]);
+        return response()->json([
+            'success' => true,
+            'data' => $articles,
+            'message' => 'Category articles retrieved.',
+        ]);
     }
 }

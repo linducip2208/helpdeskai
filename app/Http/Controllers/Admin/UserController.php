@@ -135,10 +135,26 @@ class UserController extends Controller
         ])->saveQuietly();
     }
 
+    protected function canImpersonate(User $actor, User $target): bool
+    {
+        if ($actor->hasRole('super-admin')) {
+            return true;
+        }
+
+        $ranks = ['customer' => 1, 'agent' => 2, 'manager' => 3, 'admin' => 4, 'super-admin' => 5];
+
+        $rankOf = fn (User $u) => $u->roles->pluck('name')
+            ->map(fn ($name) => $ranks[$name] ?? 0)
+            ->max() ?? 0;
+
+        return $rankOf($actor) > $rankOf($target);
+    }
+
     public function impersonate(User $user): RedirectResponse
     {
         abort_if(session()->has('impersonator_id'), 403, 'Already impersonating a user.');
         abort_if($user->id === auth()->id(), 422, 'You cannot impersonate yourself.');
+        abort_unless($this->canImpersonate(auth()->user(), $user), 403, 'You cannot impersonate a user with equal or higher privileges.');
 
         session(['impersonator_id' => auth()->id()]);
         Auth::login($user);
@@ -168,22 +184,22 @@ class UserController extends Controller
 
     public function exportCsv(): StreamedResponse
     {
-        $users = User::with('roles')->get();
-
-        return response()->streamDownload(function () use ($users) {
+        return response()->streamDownload(function () {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['ID', 'Name', 'Email', 'Roles', 'Active', 'Created At']);
 
-            foreach ($users as $user) {
-                fputcsv($handle, [
-                    $user->id,
-                    $user->name,
-                    $user->email,
-                    $user->roles->pluck('name')->implode(', '),
-                    $user->is_active ? 'Yes' : 'No',
-                    $user->created_at->toDateTimeString(),
-                ]);
-            }
+            User::with('roles')->orderBy('id')->chunk(500, function ($users) use ($handle) {
+                foreach ($users as $user) {
+                    fputcsv($handle, [
+                        $user->id,
+                        $user->name,
+                        $user->email,
+                        $user->roles->pluck('name')->implode(', '),
+                        $user->is_active ? 'Yes' : 'No',
+                        $user->created_at->toDateTimeString(),
+                    ]);
+                }
+            });
 
             fclose($handle);
         }, 'users-export.csv');

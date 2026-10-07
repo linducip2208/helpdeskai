@@ -4,8 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $key
+ * @property string $permissions
+ * @property Carbon|null $last_used_at
+ * @property Carbon|null $expires_at
+ * @property int $usage_count
+ * @property bool $is_active
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User $user
+ * @property-read string $masked_key
+ */
 class ApiKey extends Model
 {
     protected $fillable = [

@@ -255,10 +255,10 @@
                             <li class="mb-1">✓ 24 preset AI provider (BYOK)</li>
                             <li class="mb-1">✓ pSEO, 2FA, push notifications, license kit</li>
                         </ul>
-                        <a href="https://wa.me/6281296052010?text=Halo,%20saya%20tertarik%20beli%20source%20code%20HelpDesk%20AI%20dari%20website%20ini."
+                        <a href="https://wa.me/{{ '62'.ltrim(config('helpdesk.sales_contact', '081296052010'), '0') }}?text=Halo,%20saya%20tertarik%20beli%20source%20code%20HelpDesk%20AI%20dari%20website%20ini."
                            target="_blank" rel="noopener" @click="close()"
                            class="btn btn-success w-100">
-                            Chat WhatsApp 081296052010
+                            Chat WhatsApp {{ config('helpdesk.sales_contact', '081296052010') }}
                         </a>
                         <button type="button" @click="close()" class="btn btn-link btn-sm w-100 text-muted mt-2">
                             Nanti saja
@@ -293,9 +293,10 @@
                     </ul>
                 </div>
                 <div class="col-6 col-md-3 mb-3">
-                    <h4 class="subheader mb-2">{{ __('Company') }}</h4>
+                    <h4 class="subheader mb-2">Company</h4>
                     <ul class="list-unstyled small">
-                        <li><a href="{{ url('/contact') }}">{{ __('Contact') }}</a></li>
+                        <li><a href="{{ url('/contact') }}">Contact</a></li>
+                        <li><a href="{{ route('support') }}">Support &amp; Licensing</a></li>
                     </ul>
                 </div>
             </div>

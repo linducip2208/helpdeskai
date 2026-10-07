@@ -96,7 +96,56 @@ class ReportService
             'ai_calls' => $aiCalls,
             'ai_cost' => round($aiCost, 4),
             'automation_fired' => $automationFired,
+            'by_channel' => $this->byChannel($from, $to),
+            'aging' => $this->aging($from, $to),
+            'escalations' => ActivityLog::where('action', 'ticket_escalated')
+                ->whereBetween('created_at', [$from, $to])->count()
+                + ActivityLog::where('action', 'sla_escalated')
+                    ->whereBetween('created_at', [$from, $to])->count(),
         ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function byChannel(?string $from = null, ?string $to = null): array
+    {
+        [$from, $to] = $this->normalizeRange($from, $to);
+
+        return $this->inRange($from, $to)
+            ->selectRaw('source, COUNT(*) as total')
+            ->groupBy('source')
+            ->pluck('total', 'source')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+    }
+
+    /**
+     * Open-ticket age buckets in days.
+     *
+     * @return array<string, int>
+     */
+    public function aging(?string $from = null, ?string $to = null): array
+    {
+        [$from, $to] = $this->normalizeRange($from, $to);
+
+        $buckets = ['0-1 days' => 0, '2-3 days' => 0, '4-7 days' => 0, '8-30 days' => 0, '30+ days' => 0];
+
+        $this->inRange($from, $to)
+            ->whereIn('status', self::OPEN_STATUSES)
+            ->pluck('created_at')
+            ->each(function ($created) use (&$buckets) {
+                $days = $created->diffInDays(now());
+                match (true) {
+                    $days <= 1 => $buckets['0-1 days']++,
+                    $days <= 3 => $buckets['2-3 days']++,
+                    $days <= 7 => $buckets['4-7 days']++,
+                    $days <= 30 => $buckets['8-30 days']++,
+                    default => $buckets['30+ days']++,
+                };
+            });
+
+        return $buckets;
     }
 
     /**

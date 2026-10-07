@@ -114,6 +114,18 @@ class LicenseClient
         Cache::forget(self::GRACE_KEY);
     }
 
+    public function forgetHeartbeat(): void
+    {
+        Cache::forget(self::HEARTBEAT_KEY);
+    }
+
+    public function lastValidatedAt(): ?int
+    {
+        $ts = Cache::get(self::HEARTBEAT_KEY);
+
+        return is_numeric($ts) ? (int) $ts : null;
+    }
+
     // ─────────────────────────────────────────────────────────────────
     // Heartbeat
     // ─────────────────────────────────────────────────────────────────

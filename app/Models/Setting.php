@@ -3,7 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property string|null $value
+ * @property string $type
+ * @property string $group
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Setting extends Model
 {
     protected $fillable = [
@@ -17,17 +28,27 @@ class Setting extends Model
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        $setting = static::where('key', $key)->first();
+        $all = Cache::rememberForever('settings:all', function () {
+            $values = static::pluck('value', 'key')->all();
+            $types = static::pluck('type', 'key')->all();
+            foreach ($types as $k => $type) {
+                $values[$k.':type'] = $type;
+            }
 
-        if (! $setting) {
+            return $values;
+        });
+
+        if (! array_key_exists($key, $all)) {
             return $default;
         }
 
-        return match ($setting->type) {
-            'boolean' => (bool) $setting->value,
-            'integer' => (int) $setting->value,
-            'json', 'array' => json_decode($setting->value, true),
-            default => $setting->value,
+        $type = $all[$key.':type'] ?? 'string';
+
+        return match ($type) {
+            'boolean' => (bool) $all[$key],
+            'integer' => (int) $all[$key],
+            'json', 'array' => json_decode($all[$key], true),
+            default => $all[$key],
         };
     }
 
@@ -42,9 +63,18 @@ class Setting extends Model
 
         $storedValue = is_array($value) ? json_encode($value) : (string) $value;
 
-        return static::updateOrCreate(
+        $setting = static::updateOrCreate(
             ['key' => $key],
             ['value' => $storedValue, 'type' => $type],
         );
+
+        Cache::forget('settings:all');
+
+        return $setting;
+    }
+
+    public static function flushCache(): void
+    {
+        Cache::forget('settings:all');
     }
 }

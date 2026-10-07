@@ -91,7 +91,45 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ __('AI calls') }}</span><strong>{{ $ov['ai_calls'] ?? 0 }}</strong></div>
                 <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ __('AI cost (est.)') }}</span><strong>${{ number_format($ov['ai_cost'] ?? 0, 4) }}</strong></div>
-                <div class="d-flex justify-content-between"><span class="text-muted">{{ __('Automation fired') }}</span><strong>{{ $ov['automation_fired'] ?? 0 }}</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ __('Automation fired') }}</span><strong>{{ $ov['automation_fired'] ?? 0 }}</strong></div>
+                <div class="d-flex justify-content-between"><span class="text-muted">{{ __('Escalations') }}</span><strong>{{ $ov['escalations'] ?? 0 }}</strong></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cards mb-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">{{ __('Tickets by Channel') }}</h3></div>
+            <div class="card-body">
+                @forelse($ov['by_channel'] ?? [] as $channel => $count)
+                @php $pct = $total > 0 ? round($count / $total * 100, 1) : 0; @endphp
+                <div class="mb-3">
+                    <div class="row align-items-center mb-1">
+                        <div class="col">{{ ucfirst($channel) }}</div>
+                        <div class="col-auto text-muted">{{ $count }} ({{ $pct }}%)</div>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" style="width: {{ $pct }}%" role="progressbar" aria-valuenow="{{ $pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ $channel }}"></div>
+                    </div>
+                </div>
+                @empty
+                <div class="empty"><p class="empty-title">{{ __('No data available') }}</p></div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title">{{ __('Open Ticket Aging') }}</h3></div>
+            <div class="card-body">
+                @foreach($ov['aging'] ?? [] as $bucket => $count)
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">{{ $bucket }}</span>
+                    <strong>{{ $count }}</strong>
+                </div>
+                @endforeach
             </div>
         </div>
     </div>

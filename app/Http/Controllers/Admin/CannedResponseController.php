@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CannedResponse;
 use App\Models\Category;
 use App\Services\ActivityLogService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -89,5 +90,16 @@ class CannedResponseController extends Controller
         ActivityLogService::logCustom(auth()->id(), 'canned_delete', CannedResponse::class, $cannedResponse->id, $cannedResponse->title);
 
         return redirect()->route('admin.canned-responses.index')->with('success', 'Canned response deleted.');
+    }
+
+    public function use(CannedResponse $cannedResponse): JsonResponse
+    {
+        abort_unless($cannedResponse->is_active, 404);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['title' => $cannedResponse->title, 'body' => $cannedResponse->body],
+            'message' => 'Canned response retrieved.',
+        ]);
     }
 }

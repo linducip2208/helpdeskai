@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\User;
 use App\Services\TicketService;
+use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -35,6 +36,10 @@ class WidgetController extends Controller
                 $user->assignRole('customer');
             }
             $user->forceFill(['role' => 'customer'])->saveQuietly();
+
+            app(WebhookService::class)->dispatchGeneric('customer.created', [
+                'customer' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
+            ], 'customer-'.$user->id);
         }
 
         $ticket = app(TicketService::class)->createTicket([

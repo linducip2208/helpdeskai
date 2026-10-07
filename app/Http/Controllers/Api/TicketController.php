@@ -110,11 +110,11 @@ class TicketController extends Controller
                 'subject' => 'sometimes|string|max:255',
             ]);
 
-            $ticket->update($validated);
+            $ticket = $this->ticketService->updateTicket($ticket, $validated, $request->user()->id);
 
             return response()->json([
                 'success' => true,
-                'data' => $ticket->fresh(),
+                'data' => $ticket,
                 'message' => 'Ticket updated.',
             ]);
         }
@@ -128,11 +128,11 @@ class TicketController extends Controller
             'subject' => 'sometimes|string|max:255',
         ]);
 
-        $ticket->update($validated);
+        $ticket = $this->ticketService->updateTicket($ticket, $validated, $request->user()->id);
 
         return response()->json([
             'success' => true,
-            'data' => $ticket->fresh(),
+            'data' => $ticket,
             'message' => 'Ticket updated.',
         ]);
     }
@@ -141,7 +141,7 @@ class TicketController extends Controller
     {
         abort_unless($request->user()->hasRole(['admin', 'manager']), 403, 'Only staff managers can delete tickets.');
 
-        $ticket->delete();
+        $this->ticketService->deleteTicket($ticket, $request->user()->id);
 
         return response()->json([
             'success' => true,

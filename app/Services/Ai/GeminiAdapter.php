@@ -37,7 +37,8 @@ class GeminiAdapter implements AiAdapterInterface
 
             $url = rtrim($provider->base_url, '/').'/v1beta/models/'.$request['model'].':generateContent';
 
-            $response = Http::timeout(60)->retry(1, 500)
+            $timeout = (int) ($request['options']['timeout'] ?? 60);
+            $response = Http::timeout($timeout)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($url.'?key='.urlencode((string) $provider->decrypted_api_key), $body);
 

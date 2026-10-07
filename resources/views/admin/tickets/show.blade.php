@@ -1,7 +1,47 @@
 @extends('layouts.admin')
 @section('title', 'Ticket #' . ($ticket->id ?? '0'))
 @section('page-actions')
-    @can('tickets.merge')
+<div class="modal modal-blur fade" id="split-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Split into follow-up</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('admin.tickets.split', $ticket ?? 0) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="split-subject">Subject</label>
+                        <input type="text" name="subject" id="split-subject" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="split-body">Description</label>
+                        <textarea name="body" id="split-body" rows="4" class="form-control" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Split</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    document.addEventListener('keydown', function (e) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.target.matches('input, textarea, select')) return;
+        var body = document.getElementById('reply-body');
+        if (e.key === 'r' && body) { body.focus(); }
+        if (e.key === '?') { alert('Shortcuts: R = reply, Ctrl+K = command palette'); }
+    });
+})();
+</script>
+
+@can('tickets.merge')
     <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#merge-modal">Merge</button>
     @endcan
     <a href="{{ route('admin.tickets.edit', $ticket ?? 0) }}" class="btn">Edit</a>
@@ -33,6 +73,28 @@
         </div>
         <script>
         (function () {
+            window.helpdeskToast = function (msg) { toast(msg); };
+            function toast(msg) {
+                var area = document.getElementById('ticket-toasts');
+                if (!area) return;
+                var el = document.createElement('div');
+                el.className = 'alert alert-info alert-dismissible';
+                el.setAttribute('role', 'status');
+                el.innerHTML = '<div></div><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                el.querySelector('div').textContent = msg + ' ';
+                var link = document.createElement('a');
+                link.href = '';
+                link.className = 'alert-link';
+                link.textContent = 'Refresh';
+                el.querySelector('div').appendChild(link);
+                area.appendChild(el);
+                setTimeout(function () { el.remove(); }, 15000);
+            }
+        })();
+        </script>
+        <div id="ticket-toasts" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080; max-width: 22rem;" aria-live="polite"></div>
+        <script>
+        (function () {
             if (!window.Echo) return;
             var wrap = document.getElementById('ticket-presence');
             var avatars = document.getElementById('presence-avatars');
@@ -54,6 +116,9 @@
                 channel.here(render);
                 channel.joining(function () { channel.here(render); });
                 channel.leaving(function () { channel.here(render); });
+                channel.listen('.ticket.replied', function () { window.helpdeskToast('New reply on this ticket.'); });
+                channel.listen('.ticket.status', function (e) { window.helpdeskToast('Status changed to ' + (e.to || '') + '.'); });
+                channel.listen('.ticket.assigned', function () { window.helpdeskToast('Ticket reassigned.'); });
             } catch (e) {}
         })();
         </script>
@@ -171,7 +236,13 @@
         <div class="card mb-3">
             <div class="card-header">
                 <h3 class="card-title">Add Reply</h3>
-                <div class="card-actions">
+                <div class="card-actions d-flex gap-1">
+                    <select id="canned-select" class="form-select form-select-sm" style="max-width: 12rem;" aria-label="Insert canned response">
+                        <option value="">Canned…</option>
+                        @foreach($cannedResponses ?? [] as $canned)
+                        <option value="{{ $canned->id }}">{{ $canned->title }}</option>
+                        @endforeach
+                    </select>
                     <button type="button" id="ai-suggest-btn" class="btn btn-sm">
                         <span id="ai-suggest-label">Suggest reply with AI</span>
                     </button>
@@ -205,6 +276,22 @@
 
         <script>
         (function() {
+            const canned = document.getElementById('canned-select');
+            const body = document.getElementById('reply-body');
+            if (canned && body) {
+                canned.addEventListener('change', async () => {
+                    if (!canned.value) return;
+                    try {
+                        const res = await fetch('/admin/canned-responses/' + canned.value + '/use', { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        if (res.ok && data.data && data.data.body) {
+                            body.value = (body.value ? body.value + "\n\n" : '') + data.data.body;
+                            body.focus();
+                        }
+                    } catch (e) {}
+                    canned.value = '';
+                });
+            }
             const btn = document.getElementById('ai-suggest-btn');
             const label = document.getElementById('ai-suggest-label');
             const body = document.getElementById('reply-body');
@@ -327,8 +414,64 @@
                 @if($ticket->ai_classified_at)
                     <p class="text-muted small">Classified {{ $ticket->ai_classified_at->diffForHumans() }}</p>
                 @endif
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <button type="button" class="btn btn-sm" data-ai-action="summary">Summarize</button>
+                    <button type="button" class="btn btn-sm" data-ai-action="similar">Similar tickets</button>
+                    <button type="button" class="btn btn-sm" data-ai-action="recommend">KB articles</button>
+                    <button type="button" class="btn btn-sm" data-ai-action="answer">KB answer</button>
+                </div>
+                <div id="ai-assistant-result" class="mt-2 d-none">
+                    <p class="form-label mb-1">AI generated · <span id="ai-assistant-time"></span></p>
+                    <div id="ai-assistant-body" class="text-muted small"></div>
+                </div>
             </div>
         </div>
+        <script>
+        (function () {
+            var box = document.getElementById('ai-assistant-result');
+            var body = document.getElementById('ai-assistant-body');
+            var time = document.getElementById('ai-assistant-time');
+            if (!box) return;
+            var routes = {
+                summary: { url: '{{ route('admin.tickets.ai-summary', $ticket) }}', method: 'POST' },
+                similar: { url: '{{ route('admin.tickets.ai-similar', $ticket) }}', method: 'GET' },
+                recommend: { url: '{{ route('admin.tickets.ai-recommend', $ticket) }}', method: 'GET' },
+                answer: { url: '{{ route('admin.tickets.ai-answer', $ticket) }}', method: 'POST' },
+            };
+            function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+            document.querySelectorAll('[data-ai-action]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var r = routes[btn.getAttribute('data-ai-action')];
+                    if (!r) return;
+                    btn.disabled = true;
+                    body.textContent = 'Working…';
+                    box.classList.remove('d-none');
+                    fetch(r.url, {
+                        method: r.method,
+                        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                    }).then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
+                    .then(function (out) {
+                        time.textContent = new Date().toLocaleString();
+                        if (!out.ok) { body.textContent = (out.j && out.j.message) || 'AI unavailable.'; return; }
+                        var d = out.j.data || {};
+                        if (Array.isArray(d)) {
+                            body.innerHTML = d.length
+                                ? '<ul class="mb-0">' + d.map(function (it) { return '<li>' + esc(it.subject || it.title) + (it.uid ? ' (' + esc(it.uid) + ')' : '') + '</li>'; }).join('') + '</ul>'
+                                : 'No matches found.';
+                        } else if (d.answer) {
+                            var src = (d.sources || []).map(function (s) { return esc(s.title); }).join(', ');
+                            body.innerHTML = '<p>' + esc(d.answer) + '</p>' + (src ? '<p class="mb-0">Sources: ' + src + (d.confidence != null ? ' · confidence ' + d.confidence : '') + '</p>' : '');
+                        } else {
+                            body.textContent = d.raw || JSON.stringify(d);
+                        }
+                    }).catch(function (e) {
+                        time.textContent = new Date().toLocaleString();
+                        body.textContent = 'Network error: ' + e.message;
+                    }).finally(function () { btn.disabled = false; });
+                });
+            });
+        })();
+        </script>
         @endif
 
         <div class="card mb-3">
@@ -372,12 +515,114 @@
                 </form>
             </div>
         </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><h3 class="card-title">Tags</h3></div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    @forelse($ticket->tags ?? [] as $tag)
+                    <span class="badge bg-{{ $tag->color }}-lt">{{ $tag->name }}</span>
+                    @empty
+                    <span class="text-muted small">No tags.</span>
+                    @endforelse
+                </div>
+                <form action="{{ route('admin.tickets.tags.store', $ticket ?? 0) }}" method="POST">
+                    @csrf
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="name" maxlength="100" placeholder="Add tag…" class="form-control" required>
+                        <button type="submit" class="btn">Add</button>
+                    </div>
+                </form>
+                <form action="{{ route('admin.tickets.update', $ticket ?? 0) }}" method="POST" class="d-none"></form>
+                <div class="d-flex gap-1">
+                    @if($watching ?? false)
+                    <form action="{{ route('admin.tickets.unwatch', $ticket ?? 0) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-sm">Unwatch</button>
+                    </form>
+                    @else
+                    <form action="{{ route('admin.tickets.watch', $ticket ?? 0) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-sm">Watch</button>
+                    </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><h3 class="card-title">Related Tickets</h3></div>
+            <div class="card-body">
+                @forelse($ticket->links ?? [] as $link)
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <span class="badge bg-secondary-lt">{{ $link->relation }}</span>
+                        <a href="{{ route('admin.tickets.show', $link->linked_ticket_id) }}">{{ $link->linkedTicket->uid ?? '#'.$link->linked_ticket_id }}</a>
+                    </div>
+                    <form action="{{ route('admin.tickets.unlink', [$ticket ?? 0, $link]) }}" method="POST">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-link text-danger" onclick="return confirm('Remove link?')">×</button>
+                    </form>
+                </div>
+                @empty
+                <p class="text-muted small mb-2">No linked tickets.</p>
+                @endforelse
+                <form action="{{ route('admin.tickets.link', $ticket ?? 0) }}" method="POST">
+                    @csrf
+                    <div class="row g-2">
+                        <div class="col-5">
+                            <input type="text" name="target_uid" class="form-control form-control-sm" placeholder="TKT-XXXXX" required>
+                        </div>
+                        <div class="col-4">
+                            <select name="relation" class="form-select form-select-sm">
+                                @foreach(['related', 'parent', 'child', 'duplicate', 'blocked_by', 'follow_up'] as $rel)
+                                <option value="{{ $rel }}">{{ $rel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-3">
+                            <button type="submit" class="btn btn-sm w-100">Link</button>
+                        </div>
+                    </div>
+                </form>
+                <button type="button" class="btn btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#split-modal">Split into follow-up</button>
+            </div>
+        </div>
+
+        @if(! empty($similar))
+        <div class="card mt-3">
+            <div class="card-header"><h3 class="card-title">Possible Duplicates</h3></div>
+            <div class="list-group list-group-flush">
+                @foreach($similar as $s)
+                <a href="{{ route('admin.tickets.show', $s['id']) }}" class="list-group-item">
+                    <div class="row align-items-center">
+                        <div class="col text-truncate"><strong>{{ $s['uid'] }}</strong> — {{ $s['subject'] }}</div>
+                        <div class="col-auto"><span class="badge bg-yellow-lt">{{ $s['score'] }}</span></div>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        @if(! empty($macros))
+        <div class="card mt-3">
+            <div class="card-header"><h3 class="card-title">Macros</h3></div>
+            <div class="card-body">
+                @foreach($macros as $macro)
+                <form action="{{ route('admin.macros.apply', [$macro, $ticket ?? 0]) }}" method="POST" class="d-inline" onsubmit="return confirm('Apply macro {{ $macro->name }}?')">
+                    @csrf
+                    <button type="submit" class="btn btn-sm mb-1">{{ $macro->name }}</button>
+                </form>
+                @endforeach
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
 @can('tickets.merge')
-<div class="modal modal-blur fade" id="merge-modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
+<div class="modal modal-blur fade" id="merge-modal" tabindex="-1" role="dialog" aria-hidden="true">    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Merge Ticket</h5>

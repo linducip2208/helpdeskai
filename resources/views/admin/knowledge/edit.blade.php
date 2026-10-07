@@ -27,15 +27,17 @@
                     </div>
                     <div class="mb-3">
                         <label for="body" class="form-label">Content</label>
-                        <textarea name="body" id="body" rows="10" class="form-control" required>{{ old('body', $article->body ?? '') }}</textarea>
+                        <textarea name="content" id="body" rows="10" class="form-control" required>{{ old('content', $article->content ?? '') }}</textarea>
                     </div>
                     <div class="row g-2">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-check form-switch">
-                                    <input type="checkbox" name="is_published" value="1" {{ ($article->is_published ?? false) ? 'checked' : '' }} class="form-check-input">
-                                    <span class="form-check-label">Published</span>
-                                </label>
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    @foreach(['draft', 'published', 'archived'] as $st)
+                                    <option value="{{ $st }}" {{ old('status', $article->status) === $st ? 'selected' : '' }}>{{ ucfirst($st) }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -49,13 +51,27 @@
                     </div>
                     <div class="mb-3">
                         <label for="tags" class="form-label">Tags</label>
-                        <input type="text" name="tags" id="tags" value="{{ old('tags', $article->tags ?? '') }}" placeholder="tag1, tag2, tag3" class="form-control">
+                        <input type="text" name="tags" id="tags" value="{{ old('tags', is_array($article->tags ?? null) ? implode(', ', $article->tags) : ($article->tags ?? '')) }}" placeholder="tag1, tag2, tag3" class="form-control">
                     </div>
                     <div class="form-footer d-flex justify-content-end gap-2">
                         <a href="{{ route('admin.knowledge.index') }}" class="btn">Cancel</a>
                         <button type="submit" class="btn btn-primary">Update Article</button>
                     </div>
                 </form>
+                @if(($revisions ?? collect())->isNotEmpty())
+                <hr>
+                <h3 class="card-title">{{ __('Revision history') }}</h3>
+                <div class="table-responsive">
+                    <table class="table table-vcenter">
+                        <thead><tr><th>{{ __('Title') }}</th><th>{{ __('By') }}</th><th>{{ __('At') }}</th></tr></thead>
+                        <tbody>
+                            @foreach($revisions as $revision)
+                            <tr><td>{{ $revision->title }}</td><td class="text-muted">{{ $revision->user->name ?? '—' }}</td><td class="text-muted">{{ $revision->created_at }}</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @endif
             </div>
         </div>
     </div>

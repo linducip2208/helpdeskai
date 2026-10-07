@@ -6,6 +6,27 @@
     <div class="mb-3">
         <a href="{{ route('user.tickets.index') }}">&larr; Back to My Tickets</a>
     </div>
+    <div id="ticket-freshness" class="alert alert-info d-none" role="status">
+        <div>{{ __('There are updates on this ticket.') }} <a href="" class="alert-link">{{ __('Refresh') }}</a></div>
+    </div>
+    <script>
+    (function () {
+        var banner = document.getElementById('ticket-freshness');
+        if (!banner) return;
+        var known = {{ (int) ($ticket->replies ?? collect())->where('is_internal', false)->count() }};
+        var status = @json((string) ($ticket->status?->value ?? $ticket->status ?? ''));
+        setInterval(function () {
+            fetch('{{ route('user.tickets.poll', $ticket ?? 0) }}', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (j) {
+                    if (!j || !j.data) return;
+                    if (j.data.replies_count > known || String(j.data.status) !== String(status)) {
+                        banner.classList.remove('d-none');
+                    }
+                }).catch(function () {});
+        }, 30000);
+    })();
+    </script>
 
     @php $st = (string) ($ticket->status?->value ?? $ticket->status ?? ''); @endphp
     @php
@@ -90,6 +111,33 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Send Reply</button>
             </form>
+        </div>
+    </div>
+    @endif
+
+    @if(in_array($st, ['resolved', 'closed'], true))
+    <div class="card mt-3">
+        <div class="card-body">
+            <h3 class="card-title">Rate this support</h3>
+            @if($ticket->satisfaction_rating)
+                <p class="mb-0">You rated this ticket <strong>{{ $ticket->satisfaction_rating }}/5</strong>.</p>
+            @else
+                <form action="{{ route('user.tickets.rate', $ticket ?? 0) }}" method="POST">
+                    @csrf
+                    <div class="mb-3 d-flex gap-2">
+                        @for($i = 1; $i <= 5; $i++)
+                        <label class="form-check form-check-inline">
+                            <input type="radio" name="satisfaction_rating" value="{{ $i }}" class="form-check-input" required>
+                            <span class="form-check-label">{{ $i }}</span>
+                        </label>
+                        @endfor
+                    </div>
+                    <div class="mb-3">
+                        <textarea name="satisfaction_comment" rows="2" maxlength="1000" class="form-control" placeholder="Optional comment..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Rating</button>
+                </form>
+            @endif
         </div>
     </div>
     @endif

@@ -4,7 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $webhook_endpoint_id
+ * @property string $event
+ * @property array|null $payload
+ * @property string $idempotency_key
+ * @property string $status
+ * @property int $attempts
+ * @property int|null $response_status
+ * @property string|null $response_body
+ * @property string|null $error
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read WebhookEndpoint $endpoint
+ */
 class WebhookDelivery extends Model
 {
     protected $fillable = [

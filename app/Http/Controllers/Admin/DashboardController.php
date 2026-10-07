@@ -6,14 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\AiUsageLog;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\ReportService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function index(): View
     {
-        $stats = $this->getStats();
+        $stats = Cache::remember('dashboard:stats', 120, fn () => $this->getStats());
 
         return view('admin.dashboard', [
             'totalTickets' => $stats['total_tickets'],
@@ -36,6 +38,19 @@ class DashboardController extends Controller
             'agentWorkload' => $stats['agent_workload'],
             'recentTickets' => Ticket::with(['user', 'assignedTo', 'department'])->latest()->take(8)->get(),
             'recentUsers' => User::latest()->take(6)->get(),
+            'slaAtRisk' => Ticket::with(['assignedTo:id,name'])
+                ->whereNotNull('sla_warned_at')
+                ->where('sla_breached', false)
+                ->whereIn('status', ['open', 'in_progress', 'waiting'])
+                ->latest('sla_due_at')
+                ->take(6)
+                ->get(['id', 'uid', 'subject', 'assigned_to', 'sla_due_at']),
+            'slaBreachedTop' => Ticket::with(['assignedTo:id,name'])
+                ->where('sla_breached', true)
+                ->whereIn('status', ['open', 'in_progress', 'waiting'])
+                ->latest('sla_due_at')
+                ->take(6)
+                ->get(['id', 'uid', 'subject', 'assigned_to', 'sla_due_at']),
         ]);
     }
 
@@ -46,6 +61,10 @@ class DashboardController extends Controller
 
     private function getStats(): array
     {
+        // Shared scalars come from ReportService so dashboard and reports
+        // can never disagree. Dashboard-only series stay local.
+        $ov = app(ReportService::class)->overview();
+
         $openStatuses = ['open', 'in_progress', 'waiting'];
 
         $byStatus = Ticket::selectRaw('status, COUNT(*) as total')
@@ -58,11 +77,6 @@ class DashboardController extends Controller
             ->pluck('total', 'priority')
             ->all();
 
-        $totalTickets = Ticket::count();
-        $openTickets = Ticket::whereIn('status', $openStatuses)->count();
-        $breached = Ticket::where('sla_breached', true)->count();
-        $dueCount = Ticket::whereNotNull('sla_due_at')->count();
-
         $agentWorkload = Ticket::whereIn('status', $openStatuses)
             ->whereNotNull('assigned_to')
             ->selectRaw('assigned_to, COUNT(*) as total')
@@ -73,63 +87,27 @@ class DashboardController extends Controller
             ->get();
 
         return [
-            'total_tickets' => $totalTickets,
-            'open_tickets' => $openTickets,
+            'total_tickets' => $ov['total_tickets'],
+            'open_tickets' => $ov['open_tickets'],
             'pending_tickets' => Ticket::where('status', 'waiting')->count(),
-            'resolved_tickets' => Ticket::where('status', 'resolved')->count(),
-            'closed_tickets' => Ticket::where('status', 'closed')->count(),
-            'sla_breached' => $breached,
-            'unassigned_tickets' => Ticket::whereIn('status', $openStatuses)->whereNull('assigned_to')->count(),
+            'resolved_tickets' => $ov['resolved_tickets'],
+            'closed_tickets' => $ov['closed_tickets'],
+            'sla_breached' => $ov['sla_breached'],
+            'unassigned_tickets' => $ov['unassigned_tickets'],
             'total_users' => User::count(),
             'total_agents' => User::whereHas('roles', fn ($q) => $q->where('name', 'agent'))->count(),
-            'avg_first_response' => $this->formatDuration($this->avgMinutes('first_response_at')),
-            'avg_resolution' => $this->formatDuration($this->avgMinutes('resolved_at')),
-            'sla_compliance' => $dueCount > 0 ? round((($dueCount - $breached) / $dueCount) * 100, 1).'%' : '—',
+            'avg_first_response' => $ov['avg_first_response'] ?? '—',
+            'avg_resolution' => $ov['avg_resolution'] ?? '—',
+            'sla_compliance' => $ov['sla_compliance'] !== null ? $ov['sla_compliance'].'%' : '—',
             'tickets_today' => Ticket::whereDate('created_at', today())->count(),
             'tickets_this_week' => Ticket::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
             'ai_usage_this_month' => (float) AiUsageLog::whereMonth('created_at', now()->month)->sum('cost_estimated'),
-            'satisfaction_avg' => round((float) Ticket::whereNotNull('satisfaction_rating')->avg('satisfaction_rating'), 1),
+            'satisfaction_avg' => $ov['satisfaction_avg'],
             'trends' => $this->trends(14),
             'by_status' => $byStatus,
             'by_priority' => $byPriority,
             'agent_workload' => $agentWorkload,
         ];
-    }
-
-    /**
-     * Portable average of (column - created_at) in minutes over recent tickets.
-     */
-    private function avgMinutes(string $column): ?float
-    {
-        $rows = Ticket::whereNotNull($column)
-            ->orderByDesc('id')
-            ->take(500)
-            ->get(['created_at', $column]);
-
-        if ($rows->isEmpty()) {
-            return null;
-        }
-
-        $total = $rows->sum(fn ($t) => max(0, $t->created_at->diffInMinutes($t->{$column})));
-
-        return round($total / $rows->count(), 1);
-    }
-
-    private function formatDuration(?float $minutes): string
-    {
-        if ($minutes === null) {
-            return '—';
-        }
-
-        if ($minutes < 60) {
-            return $minutes.'m';
-        }
-
-        if ($minutes < 1440) {
-            return round($minutes / 60, 1).'h';
-        }
-
-        return round($minutes / 1440, 1).'d';
     }
 
     /**

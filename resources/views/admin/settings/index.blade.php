@@ -82,6 +82,77 @@
         </div>
     </div>
 
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">AI &amp; Privacy</h3>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-check form-switch">
+                    <input type="checkbox" name="ai.enabled" value="1" {{ ($settings->{'ai.enabled'} ?? true) ? 'checked' : '' }} class="form-check-input">
+                    <span class="form-check-label">Enable AI features</span>
+                </label>
+            </div>
+            <div class="mb-3">
+                <label class="form-check form-switch">
+                    <input type="checkbox" name="ai.process_ticket_content" value="1" {{ ($settings->{'ai.process_ticket_content'} ?? true) ? 'checked' : '' }} class="form-check-input">
+                    <span class="form-check-label">Allow AI to process ticket content (classification, sentiment, suggestions)</span>
+                </label>
+                <div class="form-hint">When off, AI calls that would include customer data are blocked by policy. Only the minimum required context is ever sent to providers.</div>
+            </div>
+            <div class="mb-3">
+                <label for="ai_data_retention_days" class="form-label">AI usage log retention (days, 0 = keep forever)</label>
+                <input type="number" name="ai_data_retention_days" id="ai_data_retention_days" min="0" value="{{ old('ai_data_retention_days', $settings->ai_data_retention_days ?? 365) }}" class="form-control">
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label for="webhook_retention_days" class="form-label">Webhook delivery retention (days, 0 = keep)</label>
+                    <input type="number" name="webhook_retention_days" id="webhook_retention_days" min="0" value="{{ old('webhook_retention_days', $settings->webhook_retention_days ?? 90) }}" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label for="notification_retention_days" class="form-label">Notification retention (days, 0 = keep)</label>
+                    <input type="number" name="notification_retention_days" id="notification_retention_days" min="0" value="{{ old('notification_retention_days', $settings->notification_retention_days ?? 180) }}" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">AI Policy (human-in-the-loop)</h3>
+        </div>
+        <div class="card-body">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label" for="ai_classification_mode">Classification apply mode</label>
+                    <select name="ai.classification_mode" id="ai_classification_mode" class="form-select">
+                        <option value="automatic" {{ ($settings->{'ai.classification_mode'} ?? 'automatic') === 'automatic' ? 'selected' : '' }}>Automatic (apply department/category)</option>
+                        <option value="suggest" {{ ($settings->{'ai.classification_mode'} ?? '') === 'suggest' ? 'selected' : '' }}>Suggestion only (record, do not apply)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="ai_priority_mode">Priority apply mode</label>
+                    <select name="ai.priority_mode" id="ai_priority_mode" class="form-select">
+                        <option value="automatic" {{ ($settings->{'ai.priority_mode'} ?? 'automatic') === 'automatic' ? 'selected' : '' }}>Automatic</option>
+                        <option value="suggest" {{ ($settings->{'ai.priority_mode'} ?? '') === 'suggest' ? 'selected' : '' }}>Suggestion only</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="ai_low_confidence_threshold">Low-confidence threshold (0–1)</label>
+                    <input type="number" step="0.05" min="0" max="1" name="ai.low_confidence_threshold" id="ai_low_confidence_threshold" value="{{ old('ai.low_confidence_threshold', $settings->{'ai.low_confidence_threshold'} ?? 0.5) }}" class="form-control">
+                    <div class="form-hint">KB answers below this confidence create an internal review note instead of being trusted.</div>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <label class="form-check">
+                        <input type="checkbox" name="ai.qa_enabled" value="1" {{ ($settings->{'ai.qa_enabled'} ?? false) ? 'checked' : '' }} class="form-check-input">
+                        <span class="form-check-label">Enable AI reply quality scoring</span>
+                    </label>
+                </div>
+            </div>
+            <p class="text-muted small mt-2 mb-0">AI never auto-sends customer replies and never auto-closes tickets. Suggestions are always drafts for agent review.</p>
+        </div>
+    </div>
+
     <div class="d-flex justify-content-end">
         <button type="submit" class="btn btn-primary">Save Settings</button>
     </div>

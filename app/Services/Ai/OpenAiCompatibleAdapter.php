@@ -12,7 +12,8 @@ class OpenAiCompatibleAdapter implements AiAdapterInterface
     public function send(AiProvider $provider, AiProviderModel $model, array $request): array
     {
         try {
-            $response = Http::timeout(60)->retry(1, 500)
+            $timeout = (int) ($request['options']['timeout'] ?? 60);
+            $response = Http::timeout($timeout)
                 ->withHeaders($this->buildHeaders($provider))
                 ->post(rtrim($provider->base_url, '/').'/v1/chat/completions', [
                     'model' => $request['model'],

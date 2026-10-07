@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Events\TicketViewing;
 use App\Http\Controllers\Controller;
+use App\Models\CannedResponse;
 use App\Models\Category;
 use App\Models\Department;
+use App\Models\Macro;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketCustomField;
+use App\Models\TicketLink;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\CustomFieldService;
@@ -49,7 +53,7 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket): View
     {
-        $ticket->load(['user', 'assignedTo', 'department', 'category', 'replies.user', 'replies.attachments', 'attachments']);
+        $ticket->load(['user', 'assignedTo', 'department', 'category', 'replies.user', 'replies.attachments', 'attachments', 'tags', 'links.linkedTicket', 'watchers']);
 
         broadcast(new TicketViewing($ticket, auth()->user()));
 
@@ -59,6 +63,12 @@ class TicketController extends Controller
             'customFieldValues' => $this->customFieldValues($ticket),
             'timeEntries' => $ticket->timeEntries()->with('user:id,name')->latest()->take(10)->get(),
             'timeTotal' => (int) $ticket->timeEntries()->sum('minutes'),
+            'macros' => Macro::where('is_active', true)
+                ->where(fn ($q) => $q->where('visibility', 'shared')->orWhere('user_id', auth()->id()))
+                ->orderBy('name')->get(['id', 'name']),
+            'cannedResponses' => CannedResponse::where('is_active', true)->orderBy('title')->get(['id', 'title']),
+            'similar' => app(TicketService::class)->similarTickets($ticket, 5),
+            'watching' => $ticket->watchers->contains('user_id', auth()->id()),
         ]);
     }
 
@@ -72,25 +82,14 @@ class TicketController extends Controller
             'subject' => 'sometimes|string|max:255',
         ]);
 
-        $ticket->update($validated);
-
-        ActivityLogService::logCustom(
-            auth()->id(),
-            'ticket_update',
-            Ticket::class,
-            $ticket->id,
-            $ticket->subject,
-            $validated
-        );
+        $this->ticketService->updateTicket($ticket, $validated, auth()->id());
 
         return back()->with('success', 'Ticket updated.');
     }
 
     public function destroy(Ticket $ticket): RedirectResponse
     {
-        $ticket->delete();
-
-        ActivityLogService::logCustom(auth()->id(), 'ticket_delete', Ticket::class, $ticket->id, $ticket->subject);
+        $this->ticketService->deleteTicket($ticket, auth()->id());
 
         return redirect()->route('admin.tickets.index')->with('success', 'Ticket deleted.');
     }
@@ -98,28 +97,34 @@ class TicketController extends Controller
     public function bulkAction(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'ids' => 'required|array',
+            'ids' => 'required|array|max:200',
             'ids.*' => 'exists:tickets,id',
             'action' => 'required|string|in:status_change,assign,delete',
             'status' => ['required_if:action,status_change', 'string', Rule::in(['open', 'in_progress', 'waiting', 'answered', 'resolved', 'closed'])],
             'assigned_to' => 'required_if:action,assign|exists:users,id',
         ]);
 
-        $query = Ticket::whereIn('id', $validated['ids']);
-
-        if ($validated['action'] === 'status_change') {
-            $query->update(['status' => $validated['status']]);
-        } elseif ($validated['action'] === 'assign') {
+        if ($validated['action'] === 'assign') {
             abort_unless($request->user()->can('tickets.assign'), 403);
-            $query->update(['assigned_to' => $validated['assigned_to']]);
         } elseif ($validated['action'] === 'delete') {
             abort_unless($request->user()->can('tickets.delete'), 403);
-            $query->delete();
         }
 
-        ActivityLogService::logCustom(auth()->id(), 'ticket_bulk_action', Ticket::class, null, 'Bulk action: '.$validated['action'], $validated);
+        $count = 0;
+        foreach (Ticket::whereIn('id', $validated['ids'])->get() as $ticket) {
+            if ($validated['action'] === 'status_change') {
+                $this->ticketService->changeStatus($ticket, $validated['status']);
+            } elseif ($validated['action'] === 'assign') {
+                $this->ticketService->assignTicket($ticket, (int) $validated['assigned_to']);
+            } elseif ($validated['action'] === 'delete') {
+                $this->ticketService->deleteTicket($ticket, auth()->id());
+            }
+            $count++;
+        }
 
-        return back()->with('success', 'Bulk action completed.');
+        ActivityLogService::logCustom(auth()->id(), 'ticket_bulk_action', Ticket::class, null, 'Bulk action: '.$validated['action'], ['count' => $count] + $validated);
+
+        return back()->with('success', "Bulk action completed on {$count} ticket(s).");
     }
 
     public function star(Ticket $ticket): JsonResponse
@@ -261,6 +266,69 @@ class TicketController extends Controller
         return redirect()->route('admin.tickets.show', $ticket)->with('success', "Merged {$secondary->uid} into {$ticket->uid}.");
     }
 
+    public function link(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $validated = $request->validate([
+            'target_uid' => 'required|string|max:32',
+            'relation' => 'required|string|in:parent,child,related,duplicate,blocked_by,follow_up',
+        ]);
+
+        $other = Ticket::where('uid', $validated['target_uid'])->first();
+        abort_if(! $other, 422, 'Target ticket not found.');
+
+        $this->ticketService->linkTickets($ticket, $other, $validated['relation'], auth()->id());
+
+        return back()->with('success', 'Ticket linked.');
+    }
+
+    public function unlink(Ticket $ticket, TicketLink $link): RedirectResponse
+    {
+        $this->ticketService->unlinkTickets($ticket, $link, auth()->id());
+
+        return back()->with('success', 'Link removed.');
+    }
+
+    public function addTag(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $validated = $request->validate(['name' => 'required|string|max:100']);
+        $this->ticketService->addTag($ticket, $validated['name'], auth()->id());
+
+        return back()->with('success', 'Tag added.');
+    }
+
+    public function removeTag(Ticket $ticket, Tag $tag): RedirectResponse
+    {
+        $this->ticketService->removeTag($ticket, $tag->name, auth()->id());
+
+        return back()->with('success', 'Tag removed.');
+    }
+
+    public function split(Request $request, Ticket $ticket): RedirectResponse
+    {
+        $validated = $request->validate([
+            'subject' => 'required|string|max:255',
+            'body' => 'required|string|max:5000',
+        ]);
+
+        $followUp = $this->ticketService->splitTicket($ticket, $validated['subject'], $validated['body'], auth()->id());
+
+        return redirect()->route('admin.tickets.show', $followUp)->with('success', "Split into {$followUp->uid}.");
+    }
+
+    public function watch(Ticket $ticket): RedirectResponse
+    {
+        $this->ticketService->watch($ticket, auth()->id());
+
+        return back()->with('success', 'You are now watching this ticket.');
+    }
+
+    public function unwatch(Ticket $ticket): RedirectResponse
+    {
+        $this->ticketService->unwatch($ticket, auth()->id());
+
+        return back()->with('success', 'Stopped watching this ticket.');
+    }
+
     public function logTime(Request $request, Ticket $ticket): RedirectResponse
     {
         $validated = $request->validate([
@@ -297,8 +365,7 @@ class TicketController extends Controller
             'assigned_to' => 'required|exists:users,id',
         ]);
 
-        $ticket->update(['assigned_to' => $validated['assigned_to']]);
-        ActivityLogService::logCustom(auth()->id(), 'ticket_assign', Ticket::class, $ticket->id, $ticket->subject, $validated);
+        $this->ticketService->assignTicket($ticket, (int) $validated['assigned_to']);
 
         return back()->with('success', 'Ticket assigned.');
     }
@@ -306,8 +373,7 @@ class TicketController extends Controller
     public function updateStatus(Request $request, Ticket $ticket): RedirectResponse
     {
         $validated = $request->validate(['status' => ['required', 'string', Rule::in(['open', 'in_progress', 'waiting', 'answered', 'resolved', 'closed'])]]);
-        $ticket->update($validated);
-        ActivityLogService::logCustom(auth()->id(), 'ticket_status', Ticket::class, $ticket->id, $ticket->subject, $validated);
+        $this->ticketService->changeStatus($ticket, $validated['status']);
 
         return back()->with('success', 'Status updated.');
     }
@@ -315,8 +381,7 @@ class TicketController extends Controller
     public function updatePriority(Request $request, Ticket $ticket): RedirectResponse
     {
         $validated = $request->validate(['priority' => ['required', 'string', Rule::in(['low', 'medium', 'high', 'urgent'])]]);
-        $ticket->update($validated);
-        ActivityLogService::logCustom(auth()->id(), 'ticket_priority', Ticket::class, $ticket->id, $ticket->subject, $validated);
+        $this->ticketService->updateTicket($ticket, $validated, auth()->id());
 
         return back()->with('success', 'Priority updated.');
     }

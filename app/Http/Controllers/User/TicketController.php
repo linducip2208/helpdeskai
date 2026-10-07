@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\TicketCustomField;
+use App\Services\ActivityLogService;
+use App\Services\AutomationService;
 use App\Services\CustomFieldService;
 use App\Services\TicketService;
+use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -92,6 +96,48 @@ class TicketController extends Controller
         return view('user.tickets.show', [
             'ticket' => $ticket,
             'customFieldValues' => $this->customFieldValues($ticket),
+        ]);
+    }
+
+    public function rate(Request $request, Ticket $ticket): RedirectResponse
+    {
+        abort_unless($ticket->user_id === auth()->id(), 403);
+        $status = $ticket->status instanceof TicketStatus
+            ? $ticket->status->value
+            : (string) $ticket->status;
+        abort_unless(in_array($status, ['resolved', 'closed'], true), 422, 'You can only rate resolved tickets.');
+        abort_if($ticket->satisfaction_rating !== null, 422, 'This ticket has already been rated.');
+
+        $validated = $request->validate([
+            'satisfaction_rating' => 'required|integer|min:1|max:5',
+            'satisfaction_comment' => 'nullable|string|max:1000',
+        ]);
+
+        $ticket->update($validated);
+
+        ActivityLogService::log('ticket_rated', $ticket, $ticket->subject, ['rating' => $validated['satisfaction_rating']]);
+        app(AutomationService::class)->fire('csat.submitted', $ticket->fresh() ?? $ticket, ['rating' => $validated['satisfaction_rating']]);
+        app(WebhookService::class)->dispatchGeneric('csat.created', [
+            'ticket' => ['id' => $ticket->id, 'uid' => $ticket->uid, 'subject' => $ticket->subject],
+            'rating' => $validated['satisfaction_rating'],
+        ], 'csat-'.$ticket->id.'-'.$validated['satisfaction_rating']);
+
+        return back()->with('success', 'Thank you for your feedback.');
+    }
+
+    public function poll(Ticket $ticket): JsonResponse
+    {
+        abort_unless($ticket->user_id === auth()->id(), 403);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'replies_count' => $ticket->replies()->where('is_internal', false)->count(),
+                'last_reply_id' => $ticket->replies()->where('is_internal', false)->max('id'),
+                'status' => $ticket->status instanceof TicketStatus ? $ticket->status->value : (string) $ticket->status,
+                'updated_at' => $ticket->updated_at->toIso8601String(),
+            ],
+            'message' => 'Ticket state retrieved.',
         ]);
     }
 

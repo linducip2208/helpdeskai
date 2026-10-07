@@ -19,6 +19,8 @@ return [
             'ticket.classify' => 'Smart Ticket Classification',
             'ticket.suggest' => 'AI Response Suggestions',
             'ticket.sentiment' => 'Sentiment Analysis',
+            'ticket.summarize' => 'Ticket Summarization',
+            'knowledge.answer' => 'Knowledge-Grounded Answers (RAG)',
             'chat.autoreply' => 'Auto Chat Reply',
             'kb.search' => 'AI Knowledge Search',
         ],
@@ -36,4 +38,6 @@ return [
     'pseo' => [
         'enabled' => env('HELPDESK_PSEO_ENABLED', true),
     ],
+
+    'sales_contact' => env('HELPDESK_SALES_CONTACT', '081296052010'),
 ];

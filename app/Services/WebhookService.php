@@ -63,10 +63,52 @@ class WebhookService
     }
 
     /**
+     * Queue signed deliveries for an arbitrary payload (non-ticket events).
+     */
+    public function dispatchGeneric(string $event, array $payload, string $dedupe): void
+    {
+        if (! in_array($event, WebhookEndpoint::EVENTS, true)) {
+            return;
+        }
+
+        $endpoints = WebhookEndpoint::where('is_active', true)->get()->filter(
+            fn (WebhookEndpoint $e) => in_array($event, $e->eventList(), true)
+        );
+
+        if ($endpoints->isEmpty()) {
+            return;
+        }
+
+        $body = array_merge([
+            'event' => $event,
+            'occurred_at' => now()->toIso8601String(),
+        ], $payload);
+
+        foreach ($endpoints as $endpoint) {
+            $key = hash('sha256', $event.'|'.$dedupe);
+
+            $delivery = WebhookDelivery::firstOrCreate(
+                ['idempotency_key' => $key],
+                [
+                    'webhook_endpoint_id' => $endpoint->id,
+                    'event' => $event,
+                    'payload' => $body,
+                    'status' => 'pending',
+                ]
+            );
+
+            if ($delivery->status === 'pending') {
+                DeliverWebhook::dispatch($delivery->id);
+            }
+        }
+    }
+
+    /**
      * Send a single delivery synchronously (called from the queued job).
      */
     public function send(WebhookDelivery $delivery): void
     {
+        /** @var WebhookEndpoint $endpoint */
         $endpoint = $delivery->endpoint()->firstOrFail();
         $payload = $delivery->payload ?? [];
         $body = json_encode($payload, JSON_UNESCAPED_SLASHES);
@@ -92,6 +134,12 @@ class WebhookService
             'response_status' => $response->status(),
             'response_body' => substr($response->body(), 0, 4000),
         ]);
+
+        if ($response->status() >= 400 && $response->status() < 500) {
+            $delivery->update(['status' => 'failed', 'error' => 'Permanent client error (HTTP '.$response->status().'), not retried.']);
+
+            throw new WebhookPermanentFailure('Webhook endpoint responded with HTTP '.$response->status());
+        }
 
         if (! $response->successful()) {
             throw new \RuntimeException('Webhook endpoint responded with HTTP '.$response->status());

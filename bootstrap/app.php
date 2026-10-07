@@ -5,7 +5,9 @@ use App\Http\Middleware\ApiKeyAuth;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\EnsureTwoFactor;
+use App\Http\Middleware\IdempotencyKeyMiddleware;
 use App\Http\Middleware\RequirePair;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -26,12 +28,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             RequirePair::class,
             SetLocale::class,
+            SecurityHeaders::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->alias([
             'role' => CheckRole::class,
             'staff' => EnsureStaff::class,
+            'idempotency' => IdempotencyKeyMiddleware::class,
             'api.key' => ApiKeyAuth::class,
             'api.auth' => ApiAuthenticate::class,
             '2fa' => EnsureTwoFactor::class,

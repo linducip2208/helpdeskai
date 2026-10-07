@@ -4,21 +4,62 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property Carbon|null $email_verified_at
+ * @property string $password
+ * @property string|null $remember_token
+ * @property string $role
+ * @property string|null $avatar
+ * @property string|null $phone
+ * @property string|null $timezone
+ * @property Carbon|null $last_active_at
+ * @property bool $is_active
+ * @property string|null $two_factor_secret
+ * @property string|null $two_factor_recovery_codes
+ * @property Carbon|null $two_factor_confirmed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property int $assigned_tickets
+ * @property int $resolved_tickets
+ * @property int $open_tickets
+ * @property int $assigned
+ * @property int $resolved
+ * @property int $open
+ * @property-read Collection<int, Ticket> $tickets
+ * @property-read Collection<int, Ticket> $assignedTickets
+ * @property-read Collection<int, TicketReply> $ticketReplies
+ * @property-read Collection<int, TimeEntry> $timeEntries
+ * @property-read Collection<int, Conversation> $conversations
+ * @property-read Collection<int, ApiKey> $apiKeys
+ * @property-read Collection<int, ActivityLog> $activityLogs
+ * @property-read int $tickets_count
+ * @property-read string $avatar_url
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     protected $fillable = [
         'name', 'email', 'password', 'avatar', 'phone',
         'timezone', 'role', 'is_active', 'last_active_at',
+        'organization_id', 'vip', 'internal_notes',
+        'telegram_id', 'whatsapp_id',
     ];
 
     protected $hidden = [
@@ -38,6 +79,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_active_at' => 'datetime',
             'is_active' => 'boolean',
+            'vip' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
@@ -65,6 +107,26 @@ class User extends Authenticatable
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function savedViews(): HasMany
+    {
+        return $this->hasMany(SavedView::class);
+    }
+
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class, 'team_user');
     }
 
     public function apiKeys(): HasMany

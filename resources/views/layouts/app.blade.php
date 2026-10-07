@@ -21,6 +21,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body>
+        <a href="#main-content" class="visually-hidden-focusable btn btn-primary position-absolute m-2" style="z-index: 1090;">{{ __('Skip to main content') }}</a>
         <div class="page">
             @include('layouts.navigation')
 
@@ -35,7 +36,7 @@
                     </div>
                 @endisset
 
-                <div class="page-body">
+                <div class="page-body" id="main-content" tabindex="-1">
                     <div class="container-xl">
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible" role="alert">
@@ -59,6 +60,7 @@
                             <div class="col-12 col-lg-auto mt-3 mt-lg-0">
                                 <ul class="list-inline list-inline-dots mb-0">
                                     <li class="list-inline-item">{{ config('app.name', 'HelpDesk AI') }}</li>
+                                    <li class="list-inline-item">© 2026 HelpdeskAI. Commercial Proprietary Software.</li>
                                 </ul>
                             </div>
                         </div>

@@ -104,6 +104,24 @@
                         <label for="extra_headers" class="form-label">Extra Headers (JSON)</label>
                         <textarea name="extra_headers" id="extra_headers" rows="2" placeholder='{"X-Custom-Header": "value"}' class="form-control">{{ old('extra_headers') }}</textarea>
                     </div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label for="priority" class="form-label">Priority (failover order)</label>
+                            <input type="number" name="priority" id="priority" min="0" max="1000" value="{{ old('priority', 0) }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="timeout_seconds" class="form-label">Timeout (sec)</label>
+                            <input type="number" name="timeout_seconds" id="timeout_seconds" min="5" max="300" value="{{ old('timeout_seconds', 60) }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="max_retries" class="form-label">Attempts</label>
+                            <input type="number" name="max_retries" id="max_retries" min="1" max="5" value="{{ old('max_retries', 2) }}" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="organization" class="form-label">Organization</label>
+                            <input type="text" name="organization" id="organization" value="{{ old('organization') }}" class="form-control">
+                        </div>
+                    </div>
                     <div class="form-footer d-flex justify-content-end gap-2">
                         <a href="{{ route('admin.ai-providers.index') }}" class="btn">Cancel</a>
                         <button type="submit" class="btn btn-primary">Add Provider</button>

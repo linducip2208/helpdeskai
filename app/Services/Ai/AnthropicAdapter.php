@@ -37,7 +37,8 @@ class AnthropicAdapter implements AiAdapterInterface
                 $body['system'] = implode("\n", $systemMessages);
             }
 
-            $response = Http::timeout(60)->retry(1, 500)
+            $timeout = (int) ($request['options']['timeout'] ?? 60);
+            $response = Http::timeout($timeout)
                 ->withHeaders([
                     'x-api-key' => $provider->decrypted_api_key,
                     'anthropic-version' => '2023-06-01',

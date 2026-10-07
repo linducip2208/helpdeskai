@@ -15,8 +15,11 @@ class SlaService
     public function evaluateTicket(Ticket $ticket): bool
     {
         $breached = false;
+        $status = $ticket->status instanceof TicketStatus
+            ? $ticket->status->value
+            : (string) $ticket->status;
 
-        if ($ticket->sla_due_at && ! in_array($ticket->status->value, ['resolved', 'closed'], true)) {
+        if ($ticket->sla_due_at && ! in_array($status, ['resolved', 'closed'], true)) {
             if (now()->greaterThan($ticket->sla_due_at) && ! $ticket->sla_breached) {
                 $ticket->update(['sla_breached' => true]);
                 $this->sendBreachNotification($ticket, 'resolution');
@@ -26,7 +29,7 @@ class SlaService
         }
 
         if ($ticket->sla_response_due_at && $ticket->first_response_at === null
-            && in_array($ticket->status->value, self::OPEN_STATUSES, true)) {
+            && in_array($status, self::OPEN_STATUSES, true)) {
             if (now()->greaterThan($ticket->sla_response_due_at) && ! $ticket->sla_breached) {
                 $ticket->update(['sla_breached' => true]);
                 $this->sendBreachNotification($ticket, 'first_response');
@@ -58,7 +61,11 @@ class SlaService
             return;
         }
 
-        if (! in_array($ticket->status->value, self::OPEN_STATUSES, true)) {
+        $status = $ticket->status instanceof TicketStatus
+            ? $ticket->status->value
+            : (string) $ticket->status;
+
+        if (! in_array($status, self::OPEN_STATUSES, true)) {
             return;
         }
 
@@ -92,6 +99,9 @@ class SlaService
             ['due_at' => $dueAt->toDateTimeString()]
         );
 
+        app(AutomationService::class)->fire('sla.warning', $ticket->fresh() ?? $ticket, []);
+        app(WebhookService::class)->dispatch('ticket.sla_warning', $ticket->fresh() ?? $ticket, []);
+
         if ($ticket->assigned_to && $agent = User::find($ticket->assigned_to)) {
             $this->notifier->notify(
                 $agent,
@@ -115,6 +125,9 @@ class SlaService
                 'kind' => $kind,
             ]
         );
+
+        app(AutomationService::class)->fire('sla.breached', $ticket->fresh() ?? $ticket, ['kind' => $kind]);
+        app(WebhookService::class)->dispatch('ticket.sla_breached', $ticket->fresh() ?? $ticket, ['kind' => $kind]);
 
         if ($ticket->assigned_to && $agent = User::find($ticket->assigned_to)) {
             $this->notifier->notify(

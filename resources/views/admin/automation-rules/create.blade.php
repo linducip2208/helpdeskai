@@ -26,10 +26,9 @@
                     <div class="mb-3">
                         <label for="trigger_event" class="form-label">Trigger Event</label>
                         <select name="trigger_event" id="trigger_event" class="form-select" required>
-                            <option value="ticket_created">Ticket Created</option>
-                            <option value="ticket_updated">Ticket Updated</option>
-                            <option value="ticket_replied">Reply Posted</option>
-                            <option value="ticket_status_changed">Status Changed</option>
+                            @foreach(\App\Services\AutomationService::TRIGGERS as $trigger)
+                            <option value="{{ $trigger }}">{{ ucfirst(str_replace(['_', '.'], ' ', $trigger)) }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="mb-3">

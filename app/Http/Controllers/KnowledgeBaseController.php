@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KbSearch;
 use App\Models\KnowledgeArticle;
 use App\Models\KnowledgeCategory;
 use Illuminate\Http\Request;
@@ -81,6 +82,13 @@ class KnowledgeBaseController extends Controller
                 ->latest()
                 ->paginate(15)
                 ->withQueryString();
+
+            KbSearch::create([
+                'query' => mb_substr($query, 0, 191),
+                'results_count' => $results->total(),
+                'language' => app()->getLocale(),
+                'user_id' => auth()->id(),
+            ]);
         }
 
         return view('knowledge-base.search', [

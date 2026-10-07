@@ -28,15 +28,17 @@
                     </div>
                     <div class="mb-3">
                         <label for="body" class="form-label">Content</label>
-                        <textarea name="body" id="body" rows="10" class="form-control" required>{{ old('body') }}</textarea>
+                        <textarea name="content" id="body" rows="10" class="form-control" required>{{ old('content') }}</textarea>
                     </div>
                     <div class="row g-2">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-check form-switch">
-                                    <input type="checkbox" name="is_published" value="1" class="form-check-input">
-                                    <span class="form-check-label">Published</span>
-                                </label>
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="draft" selected>Draft</option>
+                                    <option value="published">Published</option>
+                                    <option value="archived">Archived</option>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">

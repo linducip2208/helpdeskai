@@ -30,7 +30,7 @@ class BackupDatabase extends Command
         }
 
         $path = $dir.DIRECTORY_SEPARATOR.$filename;
-        $mysqldump = env('MYSQLDUMP_PATH', 'mysqldump');
+        $mysqldump = config('database.mysqldump_path', 'mysqldump');
 
         $args = [
             $mysqldump,

@@ -10,5 +10,8 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sla:check')->hourly()->withoutOverlapping();
 Schedule::command('tickets:reminders')->dailyAt('08:00')->withoutOverlapping();
+Schedule::command('kb:publish')->hourly()->withoutOverlapping();
+Schedule::command('tickets:autoclose')->dailyAt('03:00')->withoutOverlapping();
+Schedule::command('maintenance:cleanup')->dailyAt('04:00')->withoutOverlapping();
 Schedule::command('db:backup')->dailyAt('02:00')->withoutOverlapping();
 Schedule::command('seo:indexnow')->dailyAt('02:45')->withoutOverlapping();

@@ -27,7 +27,10 @@ class NotificationController extends Controller
             ->limit(8)
             ->get()
             ->map(function ($n) {
-                $data = is_array($n->data) ? $n->data : (array) json_decode($n->data ?? '[]', true);
+                $data = is_array($n->data) ? $n->data : (array) json_decode((string) $n->data, true);
+                if (isset($data[0]) && is_string($data[0])) {
+                    $data = (array) json_decode($data[0], true);
+                }
 
                 return [
                     'id' => $n->id,

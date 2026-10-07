@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\WebhookDelivery;
+use App\Services\WebhookPermanentFailure;
 use App\Services\WebhookService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -39,6 +40,14 @@ class DeliverWebhook implements ShouldQueue
 
         try {
             $webhooks->send($delivery);
+        } catch (WebhookPermanentFailure $e) {
+            $delivery->update(['status' => 'failed', 'error' => substr($e->getMessage(), 0, 2000)]);
+            Log::warning('Webhook delivery permanently failed, not retrying', [
+                'delivery_id' => $this->deliveryId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
         } catch (\Throwable $e) {
             Log::warning('Webhook delivery failed, will retry', [
                 'delivery_id' => $this->deliveryId,

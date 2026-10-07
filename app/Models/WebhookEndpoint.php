@@ -2,17 +2,40 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $url
+ * @property string|null $secret_encrypted
+ * @property array|null $events
+ * @property bool $is_active
+ * @property int $timeout_seconds
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Collection<int, WebhookDelivery> $deliveries
+ * @property-read int $failed_deliveries
+ */
 class WebhookEndpoint extends Model
 {
     public const EVENTS = [
         'ticket.created',
+        'ticket.updated',
         'ticket.replied',
-        'ticket.status_changed',
         'ticket.assigned',
+        'ticket.status_changed',
+        'ticket.closed',
+        'ticket.reopened',
+        'ticket.sla_warning',
+        'ticket.sla_breached',
+        'customer.created',
+        'csat.created',
+        'ai.completed',
     ];
 
     protected $fillable = [

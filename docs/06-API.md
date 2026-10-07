@@ -1,181 +1,184 @@
 # 06 — REST API Documentation
 
+> Machine-readable spec: `public/openapi.json`, regenerated from actual routes with `php artisan openapi:generate`. Never hand-edited.
+
 ## Overview
 
-HelpDesk AI provides a comprehensive REST API (137+ endpoints) for integration with external systems. All endpoints return JSON and use **Bearer token authentication** via Laravel Sanctum.
+HelpDesk AI menyediakan REST API berjumlah **24 route** (lihat `routes/api.php` sebagai sumber kebenaran).
+Semua endpoint mengembalikan JSON dan memakai autentikasi **Bearer token** via Laravel Sanctum **atau** scoped API key.
+
+> Dokumen ini hanya memuat endpoint yang benar-benar ada di `routes/api.php`.
 
 ---
 
 ## Authentication
 
-### Obtain an API Key
+### Login (Sanctum token)
 
-API keys are generated through the admin panel (`/admin/api-keys`) or via the user dashboard. Each key is a 64-character hex string tied to a user account.
-
-**Header format:**
 ```http
-Authorization: Bearer a1b2c3d4e5f6...
+POST /api/login
+Content-Type: application/json
+
+{
+  "email": "agent@helpdeskai.test",
+  "password": "password",
+  "device_name": "mobile-app"
+}
 ```
 
-The system also accepts:
-- `X-Api-Key: a1b2c3d4e5f6...` header
-- `?api_key=a1b2c3d4e5f6...` query parameter
+**Response** `200` (`{success, data, message}` envelope):
 
-### Key Properties
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "id": 2, "name": "Sarah Agent", "email": "agent@helpdeskai.test" },
+    "token": "1|aBcDeFgHiJkLmNoP..."
+  },
+  "message": "Authenticated."
+}
+```
 
-| Property | Description |
-|----------|-------------|
-| `name` | Human-readable label |
-| `key` | 64-char SHA-256 hash |
-| `user_id` | Owner |
-| `is_active` | Can be disabled |
-| `expires_at` | Optional expiry date |
-| `last_used_at` | Auto-updated on use |
+Throttle: `THROTTLE_API_LOGIN` (default 10/menit).
+
+### Request terautentikasi
+
+```http
+Authorization: Bearer <sanctum-token-atau-api-key>
+```
+
+Alternatif yang didukung kode (`ApiAuthenticate` / `ApiKeyAuth`):
+
+- `X-API-Key: <api-key>` header
+
+> Catatan: query param `?api_key=` **tidak** didukung kode — jangan dipakai.
+
+### Logout & profil
+
+```http
+POST /api/logout   # auth: api.auth — mencabut current Sanctum token
+GET  /api/me       # auth: api.auth — user + roles
+```
+
+```json
+{ "success": true, "data": { "id": 2, "name": "Sarah Agent", "roles": [...] }, "message": "Profile retrieved." }
+```
+
+### Scoped API keys
+
+API key dibuat lewat panel admin / dashboard user. Disimpan sebagai **SHA-256 hash**, hanya ditampilkan sekali saat dibuat.
+Scope ditegakkan per HTTP method (`ApiKeyAuth::hasScope`):
+
+| Method | Scope minimal |
+|---|---|
+| `GET`, `HEAD`, `OPTIONS` | `read` |
+| `POST`, `PUT`, `PATCH` | `read-write` |
+| `DELETE` | `full` |
+
+Level: `read(1) < read-write(2) < full(3)`. Key expired / nonaktif / scope kurang → `401` / `403` envelope `{success: false, message, errors: []}`.
+Setiap pemakaian update `usage_count` + `last_used_at`.
 
 ---
 
 ## Rate Limiting
 
-| Limit | Window |
-|-------|--------|
-| 60 requests | Per minute |
+Batas default dari `config/rate-limits.php` (dapat diubah via env `THROTTLE_*`):
 
-**Response headers:**
-```http
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 58
-```
+| Scope | Default/menit | Env |
+|---|---|---|
+| API umum | 120 | `THROTTLE_API` |
+| API login | 10 | `THROTTLE_API_LOGIN` |
+| AI | 30 | `THROTTLE_AI` |
+| Contact (web) | 10 | `THROTTLE_CONTACT` |
+| Widget (web) | 5 | `THROTTLE_WIDGET` |
 
-When exceeded:
-```json
-{
-  "message": "Too Many Requests",
-  "retry_after": 42
-}
-```
-HTTP Status: `429`
+Saat terlampaui → HTTP `429`.
 
 ---
 
 ## Response Format
 
-### Success
+### Envelope standar `{success, data, message}`
+
+Dipakai oleh: auth, tickets, conversations, AI, analytics, users.
+
 ```json
 {
-  "data": {
-    "id": 1,
-    "uid": "TKT-A3B9X",
-    "subject": "Login issue",
-    "status": "open"
-  },
-  "message": "Ticket retrieved successfully"
+  "success": true,
+  "data": { "id": 1, "uid": "TKT-A3B9X", "subject": "Login issue", "status": "open" },
+  "message": "Ticket retrieved."
 }
 ```
 
-### Collection (Paginated)
+Error validasi → `422`:
+
 ```json
 {
-  "data": [
-    { "id": 1, "subject": "..." },
-    { "id": 2, "subject": "..." }
-  ],
-  "meta": {
-    "current_page": 1,
-    "last_page": 5,
-    "per_page": 15,
-    "total": 72
-  },
-  "links": {
-    "first": "https://example.com/api/tickets?page=1",
-    "last": "https://example.com/api/tickets?page=5",
-    "prev": null,
-    "next": "https://example.com/api/tickets?page=2"
-  }
+  "message": "The subject field is required. (and 1 more error)",
+  "errors": { "subject": ["The subject field is required."] }
 }
 ```
 
-### Error
-```json
-{
-  "message": "The given data was invalid.",
-  "errors": {
-    "subject": ["The subject field is required."],
-    "body": ["The body field is required."]
-  }
-}
-```
-HTTP Status: `422`
+API key salah/expired → `401`; scope kurang / bukan staff → `403`:
 
-### Not Found
 ```json
-{
-  "message": "Resource not found."
-}
+{ "success": false, "data": null, "message": "API key scope insufficient for this action." }
 ```
-HTTP Status: `404`
 
-### Unauthorized
+AI provider down → `200` vs `503` via `AiController::envelope`:
+
 ```json
-{
-  "message": "Unauthenticated."
-}
+{ "success": false, "data": null, "message": "AI provider unavailable. Please try again later." }
 ```
-HTTP Status: `401`
+
+### Envelope
+
+Semua endpoint memakai envelope `{success, data, message}` — termasuk knowledge endpoints dan `GET /api/users/{user}`.
+
+---
+
+## Auth Endpoints
+
+| Method | URL | Auth | Keterangan |
+|---|---|---|---|
+| POST | `/api/login` | publik (throttle `api_login`) | body: `email`, `password`, `device_name?` → `{user, token}` |
+| POST | `/api/logout` | `api.auth` | cabut current Sanctum token |
+| GET | `/api/me` | `api.auth` | user + roles |
 
 ---
 
 ## Ticket Endpoints
 
+`Route::apiResource('tickets', TicketController::class)` + middleware `idempotency` (header `Idempotency-Key` opsional; replay mengembalikan response tersimpan + flag `idempotent_replay`).
+
+| Method | URL | Auth |
+|---|---|---|
+| GET | `/api/tickets` | `api.auth` |
+| POST | `/api/tickets` | `api.auth` |
+| GET | `/api/tickets/{ticket}` | `api.auth` (staff, pemilik, atau assignee) |
+| PUT/PATCH | `/api/tickets/{ticket}` | `api.auth` |
+| DELETE | `/api/tickets/{ticket}` | `api.auth` + role `admin`/`manager` |
+
 ### List Tickets
+
 ```http
-GET /api/tickets?page=1&status=open&priority=high&sort=-created_at
+GET /api/tickets?status=open&priority=high&assigned_to=2&per_page=25
 ```
 
-**Query Parameters:**
-| Param | Type | Description |
-|-------|------|-------------|
-| `page` | int | Page number |
-| `per_page` | int | Items per page (max 100) |
-| `status` | string | Filter: open, in_progress, waiting, resolved, closed |
-| `priority` | string | Filter: low, medium, high, urgent |
-| `assigned_to` | int | Filter by agent ID |
-| `department_id` | int | Filter by department |
-| `search` | string | Search subject and body |
-| `sort` | string | Sort: `created_at`, `-created_at`, `priority` |
+Filter aktual (`Api\TicketController::index`): `status`, `priority`, `assigned_to`. Non-staff otomatis difilter ke tiket milik sendiri. Paginasi `per_page` (default 25, maks 100).
 
-**Response:**
+**Response** `200`:
+
 ```json
 {
-  "data": [
-    {
-      "id": 1,
-      "uid": "TKT-A3B9X",
-      "user_id": 5,
-      "assigned_to": 2,
-      "department_id": 1,
-      "category_id": 3,
-      "subject": "Cannot login to dashboard",
-      "body": "I'm getting a 500 error when trying to access...",
-      "priority": "high",
-      "status": "open",
-      "source": "web",
-      "sla_due_at": "2026-05-04T15:00:00Z",
-      "closed_at": null,
-      "is_starred": false,
-      "custom_fields": {"browser": "Chrome 125"},
-      "created_at": "2026-05-04T10:30:00Z",
-      "updated_at": "2026-05-04T10:30:00Z",
-      "user": { "id": 5, "name": "John Doe", "email": "john@example.com" },
-      "assigned_to": { "id": 2, "name": "Sarah Agent" },
-      "department": { "id": 1, "name": "Technical Support" },
-      "category": { "id": 3, "name": "Login Issues" }
-    }
-  ],
-  "meta": { "current_page": 1, "last_page": 1, "per_page": 15, "total": 1 }
+  "success": true,
+  "data": { "current_page": 1, "data": [ { "id": 1, "uid": "TKT-A3B9X", "subject": "...", "status": "open" } ], "total": 1 },
+  "message": "Tickets retrieved."
 }
 ```
 
 ### Create Ticket
+
 ```http
 POST /api/tickets
 Content-Type: application/json
@@ -185,494 +188,145 @@ Content-Type: application/json
   "body": "I'm getting a 500 error when trying to access my account.",
   "department_id": 1,
   "category_id": 3,
-  "priority": "high",
-  "custom_fields": {
-    "browser": "Chrome 125"
-  }
+  "priority": "high"
 }
 ```
 
-**Required fields:** `subject`, `body`, `department_id`, `category_id`
-
-**Optional fields:** `priority` (default: medium), `custom_fields` (JSON)
-
-**Response:** `201 Created` — returns created ticket object.
+Wajib: `subject` (maks 255), `body`, `department_id` (harus ada di `departments`). Opsional: `category_id`, `priority` (`low|medium|high|urgent`, default `medium`). `user_id` diisi dari user terautentikasi. → `201 Created`, `"message": "Ticket created."`.
 
 ### Get Ticket
+
 ```http
 GET /api/tickets/{ticket}
 ```
-Returns full ticket with replies, attachments, and relations.
+
+Memuat `user, assignedTo, department, category, replies.user, attachments`. Untuk non-staff, replies dengan `is_internal = true` disembunyikan. → `"message": "Ticket retrieved."`.
 
 ### Update Ticket
+
+- **Non-staff** (hanya tiket milik sendiri): boleh ubah `subject` saja.
+- **Staff**: `status` (salah satu nilai `TicketStatus`: `open|in_progress|waiting|answered|resolved|closed`), `priority`, `assigned_to`, `department_id`, `category_id`, `subject`.
+
 ```http
-PUT /api/tickets/{ticket}
+PUT /api/tickets/42
 Content-Type: application/json
 
-{
-  "subject": "Updated: Cannot login",
-  "priority": "urgent",
-  "assigned_to": 2
-}
+{ "status": "in_progress", "priority": "urgent", "assigned_to": 2 }
 ```
 
-**Updatable fields:** `subject`, `body`, `priority`, `assigned_to`, `category_id`, `status`, `custom_fields`
+→ `"message": "Ticket updated."`.
 
 ### Delete Ticket
+
 ```http
 DELETE /api/tickets/{ticket}
 ```
-Returns `204 No Content`. Only ticket creator or admin can delete.
 
-### Add Reply
-```http
-POST /api/tickets/{ticket}/replies
-Content-Type: application/json
+Hanya role `admin`/`manager` (selain itu `403` walau scope API key `full`). → `200`, `"message": "Ticket deleted."`, `data: null`.
 
-{
-  "body": "Thank you for reporting this. Can you try clearing your cache?",
-  "is_internal": false
-}
-```
-
-### Update Status
-```http
-PATCH /api/tickets/{ticket}/status
-Content-Type: application/json
-
-{
-  "status": "in_progress"
-}
-```
-
-### Toggle Star
-```http
-POST /api/tickets/{ticket}/star
-```
-Returns `200` with updated `is_starred` value.
-
-### Upload Attachment
-```http
-POST /api/tickets/{ticket}/attachments
-Content-Type: multipart/form-data
-
-file: screenshot.png
-```
+> Yang **tidak** ada di API (walau ada di web admin): sub-resource `/replies`, `/status`, `/star`, `/attachments`, `/bulk`. Jangan mengasumsikannya ada.
 
 ---
 
 ## Knowledge Base Endpoints
 
-### List Articles
-```http
-GET /api/knowledge?category={slug}&status=published&search=keyword&page=1
-```
+| Method | URL | Auth | Controller |
+|---|---|---|---|
+| GET | `/api/knowledge?search=&per_page=` | `api.auth` | `index` — artikel `published` + relasi `category`, envelope konsisten |
+| GET | `/api/knowledge/search?q=&per_page=` | `api.auth` | `search` — `q` wajib min 2 karakter, hanya `published` |
+| GET | `/api/knowledge/categories` | `api.auth` | `categories` — kategori aktif + jumlah artikel |
+| GET | `/api/knowledge/category/{category}` | `api.auth` | `categoryArticles` — hanya kategori aktif (non-staff 404), artikel `published` |
+| GET | `/api/knowledge/{article}` | `api.auth` | `show` — hanya `published` (non-staff 404), increment `view_count` |
 
-### Get Article
-```http
-GET /api/knowledge/{slug}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "id": 1,
-    "title": "How to reset your password",
-    "slug": "how-to-reset-password",
-    "content": "<p>Step 1: ...</p>",
-    "excerpt": "Follow these steps to reset...",
-    "category": { "id": 1, "name": "Account Help", "slug": "account-help" },
-    "author": { "id": 2, "name": "Sarah Agent" },
-    "status": "published",
-    "is_featured": false,
-    "view_count": 1523,
-    "helpful_count": 87,
-    "not_helpful_count": 3,
-    "meta_title": "How to Reset Password - HelpDesk AI",
-    "meta_description": "Step-by-step guide...",
-    "created_at": "2026-01-15T08:00:00Z"
-  }
-}
-```
-
-### Vote on Article
-```http
-POST /api/knowledge/{slug}/vote
-Content-Type: application/json
-
-{
-  "vote": "helpful"  // or "not_helpful"
-}
-```
-
-### Search Knowledge Base
-```http
-GET /api/knowledge/search?q=password+reset&limit=10
-```
-
-### List Categories
-```http
-GET /api/knowledge/categories
-```
-
-### List FAQs
-```http
-GET /api/knowledge/faqs?category_id=1
-```
+> Urutan route sudah benar: `/search` dan `/categories` dideklarasikan sebelum `/{article}` agar tidak tertelan route binding.
 
 ---
 
-## Chat Endpoints
+## Conversation Endpoints
 
-### List Conversations
-```http
-GET /api/conversations
-```
+| Method | URL | Auth | Keterangan |
+|---|---|---|---|
+| GET | `/api/conversations` | `api.auth` | milik user / assigned ke user, `latest('last_message_at')`, 25/page |
+| GET | `/api/conversations/{conversation}` | `api.auth` | `{conversation, messages}` + otorisasi owner/assignee/staff |
+| POST | `/api/conversations` | `api.auth` + `idempotency` | body: `body` (wajib, maks 10000). `firstOrCreate` conversation `open` + pesan pertama → `201`, `"message": "Message sent."` |
+| POST | `/api/conversations/{conversation}/message` | `api.auth` + `idempotency` | body: `body` (wajib, maks 10000), `type` selalu `text` → `201` |
 
-### Start Conversation
-```http
-POST /api/conversations
-Content-Type: application/json
-
-{
-  "subject": "Need help with billing"
-}
-```
-
-### Get Conversation
-```http
-GET /api/conversations/{id}
-```
-Returns conversation with all messages.
-
-### Send Message
-```http
-POST /api/conversations/{id}/messages
-Content-Type: application/json
-
-{
-  "body": "Hello, I need help with my invoice",
-  "type": "text"  // text, file
-}
-```
-
-### Upload File in Chat
-```http
-POST /api/conversations/{id}/messages
-Content-Type: multipart/form-data
-
-body: Here's the screenshot
-type: file
-file: invoice_error.png
-```
+> Tidak ada endpoint `POST /api/conversations/{id}/messages` (jamak), upload file chat, atau `subject` saat start conversation — body di atas adalah kontrak aktual.
 
 ---
 
 ## AI Endpoints
 
-### Classify Ticket
+Semua endpoint AI **staff-only** (`admin`/`manager`/`agent`, selain itu `403`) + throttle `ai` (default 30/menit). Envelope via `AiController::envelope` (sukses `200`, provider down `503`).
+
+| Method | URL | Body aktual |
+|---|---|---|
+| POST | `/api/ai/classify` | `subject` (wajib, maks 500), `body` (wajib, maks 5000) → saran department/category/priority + `confidence` |
+| POST | `/api/ai/suggest` | `ticket_subject` (wajib, maks 500), `ticket_body` (wajib, maks 5000), `tone?` (`professional\|friendly\|empathetic\|brief`) → teks balasan saran |
+| POST | `/api/ai/sentiment` | `text` (wajib, maks 5000) → `{sentiment: positive\|neutral\|negative, score, urgency}` |
+
 ```http
 POST /api/ai/classify
 Content-Type: application/json
 
-{
-  "subject": "Cannot login to dashboard",
-  "body": "I'm getting a 500 error when trying to access my account."
-}
+{ "subject": "Cannot login", "body": "Getting a 500 error since this morning." }
 ```
 
-**Response:**
 ```json
 {
-  "data": {
-    "suggested_category": "Login Issues",
-    "suggested_category_id": 3,
-    "suggested_department": "Technical Support",
-    "suggested_department_id": 1,
-    "suggested_priority": "high",
-    "confidence": 0.92
-  }
+  "success": true,
+  "data": { "department": "Technical Support", "category": "Login Issues", "priority": "high", "confidence": 0.92 },
+  "message": "Ticket classified."
 }
 ```
 
-### Get AI Suggestion
-```http
-POST /api/ai/suggest
-Content-Type: application/json
-
-{
-  "ticket_id": 42
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "suggested_reply": "Hello John,\n\nThank you for reaching out. Based on your description...",
-    "referenced_articles": [
-      { "id": 5, "title": "Troubleshooting Login Errors" }
-    ],
-    "confidence": 0.85
-  }
-}
-```
-
-### Analyze Sentiment
-```http
-POST /api/ai/sentiment
-Content-Type: application/json
-
-{
-  "text": "I've been waiting for 3 days and nobody has helped me. This is ridiculous."
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "sentiment": "angry",
-    "score": 0.94,
-    "labels": { "positive": 0.02, "neutral": 0.04, "negative": 0.18, "angry": 0.76 }
-  }
-}
-```
-
-### Summarize Ticket
-```http
-POST /api/ai/summarize
-Content-Type: application/json
-
-{
-  "ticket_id": 42
-}
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "summary": "User John cannot log into the dashboard after recent password change. Getting 500 error with Chrome 125 on Windows...",
-    "key_points": [
-      "Login failure after password change",
-      "500 server error",
-      "Chrome 125, Windows 11"
-    ]
-  }
-}
-```
+> Tidak ada endpoint `POST /api/ai/summarize` di API (summarize hanya ada di web admin via `AiAssistantController`). Jangan mendokumentasikannya sebagai endpoint API.
 
 ---
 
 ## Analytics Endpoints
 
-### Dashboard Stats
-```http
-GET /api/admin/analytics/stats
-```
+| Method | URL | Auth | Query aktual |
+|---|---|---|---|
+| GET | `/api/analytics/summary` | `api.auth` | `from?`, `to?` (date) → `ReportService::overview` |
+| GET | `/api/analytics/tickets-by-status` | `api.auth` | `from?`, `to?` → `{by_status, by_priority}` |
 
-**Response:**
 ```json
 {
-  "data": {
-    "total_tickets": 1542,
-    "open_tickets": 47,
-    "resolved_today": 23,
-    "avg_response_time_minutes": 12.5,
-    "avg_resolution_time_minutes": 145.3,
-    "sla_compliance_pct": 87.2,
-    "customer_satisfaction_pct": 91.5
-  }
+  "success": true,
+  "data": { "by_status": { "open": 12 }, "by_priority": { "high": 4 } },
+  "message": "Ticket distribution retrieved."
 }
 ```
 
-### Chart Data
-```http
-GET /api/admin/analytics/chart-data?period=30d&group=daily
-```
-
-**Query Params:**
-- `period`: 7d, 30d, 3m, 12m
-- `group`: daily, weekly, monthly
-
-**Response:**
-```json
-{
-  "data": {
-    "labels": ["Apr 5", "Apr 6", "Apr 7", ...],
-    "datasets": [
-      { "label": "New Tickets", "data": [12, 15, 8, ...] },
-      { "label": "Resolved", "data": [10, 14, 9, ...] }
-    ]
-  }
-}
-```
-
-### Agent Performance
-```http
-GET /api/admin/analytics/agents?from=2026-04-01&to=2026-05-01
-```
-
-**Response:**
-```json
-{
-  "data": [
-    {
-      "agent": { "id": 2, "name": "Sarah Agent" },
-      "tickets_resolved": 87,
-      "avg_response_time_minutes": 8.3,
-      "avg_resolution_time_minutes": 102.5,
-      "satisfaction_pct": 94.2
-    }
-  ]
-}
-```
+> `dashboard()` dan `chartData()` (dengan param `days`) ada di controller tetapi tidak di-routing. Tidak ada prefix `/api/admin/analytics/*` dan tidak ada endpoint agent-performance di API.
 
 ---
 
 ## User Endpoints
 
-### Get Profile
-```http
-GET /api/user
-```
+| Method | URL | Auth | Keterangan |
+|---|---|---|---|
+| GET | `/api/users?search=&per_page=` | `api.auth` + role `admin`/`manager` | paginasi (default 25, maks 100); secrets 2FA selalu di-hidden |
 
-### Update Profile
-```http
-PUT /api/user
-Content-Type: application/json
-
-{
-  "name": "John Updated",
-  "phone": "+1234567890",
-  "timezone": "America/New_York"
-}
-```
-
-### List My API Keys
-```http
-GET /api/user/api-keys
-```
-
-### Generate API Key
-```http
-POST /api/user/api-keys
-Content-Type: application/json
-
-{
-  "name": "Integration Key",
-  "expires_at": "2027-01-01T00:00:00Z"
-}
-```
-
-### Delete API Key
-```http
-DELETE /api/user/api-keys/{id}
-```
-
----
-
-## pSEO Endpoints
-
-### Best HelpDesk Software
-```http
-GET /api/pseo/best/{category}?year=2026
-```
-
-**Response:**
 ```json
-{
-  "data": {
-    "title": "Best Help Desk Software in 2026",
-    "description": "Discover the best help desk software in 2026...",
-    "products": [
-      {
-        "id": 1,
-        "name": "HelpDesk AI Pro",
-        "slug": "helpdesk-ai-pro",
-        "description": "...",
-        "features": ["AI-powered", "Live Chat", "SLA"],
-        "rating": 4.8
-      }
-    ],
-    "faqs": [...]
-  }
-}
+{ "success": true, "data": { "current_page": 1, "data": [ { "id": 5, "name": "...", "roles": [...] } ] }, "message": "Users retrieved." }
 ```
 
-### Compare Two Solutions
-```http
-GET /api/pseo/compare/{slugA}-vs-{slugB}
-```
-
-### Alternatives
-```http
-GET /api/pseo/alternatives/{slug}
-```
+> `show()` ada di controller tetapi tidak di-routing. Tidak ada `GET/PUT /api/user` maupun `/api/user/api-keys` di API ini.
 
 ---
 
-## Admin Endpoints (admin scope required)
+## Webhooks (outbound)
 
-### Manage Departments
-```http
-GET    /api/admin/departments
-POST   /api/admin/departments
-PUT    /api/admin/departments/{id}
-DELETE /api/admin/departments/{id}
-```
-
-### Manage Categories
-```http
-GET    /api/admin/categories
-POST   /api/admin/categories
-PUT    /api/admin/categories/{id}
-DELETE /api/admin/categories/{id}
-```
-
-### Manage Users
-```http
-GET    /api/admin/users?search=&role=&page=
-POST   /api/admin/users
-GET    /api/admin/users/{id}
-PUT    /api/admin/users/{id}
-DELETE /api/admin/users/{id}
-```
-
-### AI Providers
-```http
-GET    /api/admin/ai-providers
-POST   /api/admin/ai-providers
-PUT    /api/admin/ai-providers/{id}
-DELETE /api/admin/ai-providers/{id}
-POST   /api/admin/ai-providers/{id}/test-connection
-POST   /api/admin/ai-providers/{id}/fetch-models
-```
-
-### AI Feature Configs
-```http
-GET    /api/admin/ai-features
-PUT    /api/admin/ai-features/{id}
-```
-
-### Activity Log
-```http
-GET /api/admin/activity-log?action=&user_id=&from=&to=&page=
-```
-
-### Settings
-```http
-GET  /api/admin/settings?group=
-POST /api/admin/settings
-```
+Dokumentasi lengkap pindah ke **[docs/14-WEBHOOKS.md](14-WEBHOOKS.md)**: events, signature HMAC-SHA256, headers, retry `1m/5m/15m/1h`, no-retry 4xx, idempotency.
 
 ---
 
 ## Code Examples
 
 ### PHP (Guzzle)
+
 ```php
 <?php
 use GuzzleHttp\Client;
@@ -685,7 +339,7 @@ $client = new Client([
     ],
 ]);
 
-// Create ticket
+// Create ticket (field aktual)
 $response = $client->post('tickets', [
     'json' => [
         'subject' => 'Login issue',
@@ -698,183 +352,100 @@ $response = $client->post('tickets', [
 
 $ticket = json_decode($response->getBody(), true)['data'];
 
-// List open tickets
+// List open tickets (filter aktual)
 $response = $client->get('tickets', [
-    'query' => ['status' => 'open', 'sort' => '-created_at'],
+    'query' => ['status' => 'open', 'per_page' => 25],
 ]);
 
 $tickets = json_decode($response->getBody(), true)['data'];
 ```
 
 ### JavaScript (fetch)
+
 ```javascript
 const API_BASE = 'https://yourdomain.com/api';
 const API_KEY = 'a1b2c3d4e5f6...';
 
-// Create ticket
-async function createTicket(data) {
-  const response = await fetch(`${API_BASE}/tickets`, {
+// AI classify (staff key, field aktual)
+async function classifyTicket(subject, body) {
+  const response = await fetch(`${API_BASE}/ai/classify`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${API_KEY}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ subject, body }),
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message);
   }
-  
-  return response.json();
-}
 
-// Usage
-createTicket({
-  subject: 'Login issue',
-  body: 'Cannot access dashboard',
-  department_id: 1,
-  category_id: 3,
-  priority: 'high',
-}).then(data => console.log(data.data));
+  return response.json(); // { success, data, message }
+}
 ```
 
 ### cURL
+
 ```bash
-# Create ticket
-curl -X POST "https://yourdomain.com/api/tickets" \
-  -H "Authorization: Bearer a1b2c3d4e5f6..." \
+# Login
+curl -X POST "https://yourdomain.com/api/login" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
-  -d '{
-    "subject": "Login issue",
-    "body": "Cannot access dashboard",
-    "department_id": 1,
-    "category_id": 3,
-    "priority": "high"
-  }'
+  -d '{"email": "agent@example.com", "password": "secret", "device_name": "cli"}'
+
+# Create ticket (dengan idempotency key)
+curl -X POST "https://yourdomain.com/api/tickets" \
+  -H "Authorization: Bearer <key>" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000" \
+  -d '{"subject": "Login issue", "body": "Cannot access dashboard", "department_id": 1, "priority": "high"}'
 
 # List tickets
-curl -X GET "https://yourdomain.com/api/tickets?status=open&sort=-created_at" \
-  -H "Authorization: Bearer a1b2c3d4e5f6..." \
+curl -X GET "https://yourdomain.com/api/tickets?status=open&per_page=25" \
+  -H "Authorization: Bearer <key>" \
   -H "Accept: application/json"
 
-# Get ticket with replies
-curl -X GET "https://yourdomain.com/api/tickets/42" \
-  -H "Authorization: Bearer a1b2c3d4e5f6..." \
-  -H "Accept: application/json"
-
-# Add reply
-curl -X POST "https://yourdomain.com/api/tickets/42/replies" \
-  -H "Authorization: Bearer a1b2c3d4e5f6..." \
-  -H "Content-Type: application/json" \
-  -d '{"body": "Can you try clearing your cache?"}'
-
-# AI sentiment analysis
+# AI sentiment
 curl -X POST "https://yourdomain.com/api/ai/sentiment" \
-  -H "Authorization: Bearer a1b2c3d4e5f6..." \
+  -H "Authorization: Bearer <staff-key>" \
   -H "Content-Type: application/json" \
   -d '{"text": "I have been waiting for 3 days!"}'
 
-# Upload attachment
-curl -X POST "https://yourdomain.com/api/tickets/42/attachments" \
-  -H "Authorization: Bearer a1b2c3d4e5f6..." \
-  -F "file=@screenshot.png"
+# Analytics
+curl -X GET "https://yourdomain.com/api/analytics/summary?from=2026-09-01&to=2026-10-01" \
+  -H "Authorization: Bearer <key>" \
+  -H "Accept: application/json"
 ```
 
 ---
 
-## Full Endpoint Index
+## Full Endpoint Index (aktual, 22 route)
 
-### Tickets
 | Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/tickets` | User |
-| POST | `/api/tickets` | User |
-| GET | `/api/tickets/{ticket}` | User |
-| PUT | `/api/tickets/{ticket}` | User/Admin |
-| DELETE | `/api/tickets/{ticket}` | User/Admin |
-| POST | `/api/tickets/{ticket}/replies` | User |
-| PATCH | `/api/tickets/{ticket}/status` | User/Admin |
-| POST | `/api/tickets/{ticket}/star` | User/Admin |
-| POST | `/api/tickets/{ticket}/attachments` | User |
-| POST | `/api/tickets/bulk` | Admin |
-
-### Knowledge Base
-| Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/knowledge` | Public |
-| GET | `/api/knowledge/{slug}` | Public |
-| POST | `/api/knowledge/{slug}/vote` | User |
-| GET | `/api/knowledge/search` | Public |
-| GET | `/api/knowledge/categories` | Public |
-| GET | `/api/knowledge/faqs` | Public |
-
-### Conversations
-| Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/conversations` | User |
-| POST | `/api/conversations` | User |
-| GET | `/api/conversations/{id}` | User |
-| POST | `/api/conversations/{id}/messages` | User |
-
-### AI
-| Method | URL | Auth |
-|--------|-----|------|
-| POST | `/api/ai/classify` | User/Admin |
-| POST | `/api/ai/suggest` | User/Admin |
-| POST | `/api/ai/sentiment` | User/Admin |
-| POST | `/api/ai/summarize` | User/Admin |
-
-### Analytics
-| Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/admin/analytics/stats` | Admin |
-| GET | `/api/admin/analytics/chart-data` | Admin |
-| GET | `/api/admin/analytics/agents` | Admin |
-
-### Users
-| Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/user` | User |
-| PUT | `/api/user` | User |
-| GET | `/api/user/api-keys` | User |
-| POST | `/api/user/api-keys` | User |
-| DELETE | `/api/user/api-keys/{id}` | User |
-
-### Admin
-| Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/admin/users` | Admin |
-| POST | `/api/admin/users` | Admin |
-| GET | `/api/admin/users/{id}` | Admin |
-| PUT | `/api/admin/users/{id}` | Admin |
-| DELETE | `/api/admin/users/{id}` | Admin |
-| GET | `/api/admin/departments` | Admin |
-| POST | `/api/admin/departments` | Admin |
-| PUT | `/api/admin/departments/{id}` | Admin |
-| DELETE | `/api/admin/departments/{id}` | Admin |
-| GET | `/api/admin/categories` | Admin |
-| POST | `/api/admin/categories` | Admin |
-| PUT | `/api/admin/categories/{id}` | Admin |
-| DELETE | `/api/admin/categories/{id}` | Admin |
-| GET | `/api/admin/ai-providers` | Admin |
-| POST | `/api/admin/ai-providers` | Admin |
-| PUT | `/api/admin/ai-providers/{id}` | Admin |
-| DELETE | `/api/admin/ai-providers/{id}` | Admin |
-| POST | `/api/admin/ai-providers/{id}/test-connection` | Admin |
-| POST | `/api/admin/ai-providers/{id}/fetch-models` | Admin |
-| GET | `/api/admin/ai-features` | Admin |
-| PUT | `/api/admin/ai-features/{id}` | Admin |
-| GET | `/api/admin/activity-log` | Admin |
-| GET | `/api/admin/settings` | Admin |
-| POST | `/api/admin/settings` | Admin |
-
-### pSEO
-| Method | URL | Auth |
-|--------|-----|------|
-| GET | `/api/pseo/best/{category}` | Public |
-| GET | `/api/pseo/compare/{slugA}-vs-{slugB}` | Public |
-| GET | `/api/pseo/alternatives/{slug}` | Public |
+|---|---|---|
+| POST | `/api/login` | publik (throttle login) |
+| POST | `/api/logout` | `api.auth` |
+| GET | `/api/me` | `api.auth` |
+| GET | `/api/tickets` | `api.auth` |
+| POST | `/api/tickets` | `api.auth` + idempotency |
+| GET | `/api/tickets/{ticket}` | `api.auth` (owner/assignee/staff) |
+| PUT/PATCH | `/api/tickets/{ticket}` | `api.auth` |
+| DELETE | `/api/tickets/{ticket}` | `api.auth` + admin/manager |
+| GET | `/api/knowledge` | `api.auth` |
+| GET | `/api/knowledge/{article}` | `api.auth` |
+| GET | `/api/knowledge/category/{category}` | `api.auth` (⚠️ action belum ada) |
+| GET | `/api/knowledge/search` | `api.auth` (⚠️ action belum ada) |
+| GET | `/api/conversations` | `api.auth` |
+| GET | `/api/conversations/{conversation}` | `api.auth` |
+| POST | `/api/conversations` | `api.auth` + idempotency |
+| POST | `/api/conversations/{conversation}/message` | `api.auth` + idempotency |
+| POST | `/api/ai/classify` | `api.auth` + staff + throttle ai |
+| POST | `/api/ai/suggest` | `api.auth` + staff + throttle ai |
+| POST | `/api/ai/sentiment` | `api.auth` + staff + throttle ai |
+| GET | `/api/analytics/summary` | `api.auth` |
+| GET | `/api/analytics/tickets-by-status` | `api.auth` |
+| GET | `/api/users` | `api.auth` + admin/manager |
